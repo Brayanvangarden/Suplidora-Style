@@ -1,22 +1,47 @@
-node_modules
-dist
-release
-.vscode
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+out/
+build/
+
+# Local editor settings
+.vscode/
+
+# Local environment files (keep safe examples trackable)
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Operating system files
 .DS_Store
+Thumbs.db
 
-# Electron
-out
-
-# Logs
-logs
+# Logs and temporary files
+logs/
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+*.tmp
+*.temp
+*.swp
 
-# SQLite
+# Local SQLite databases and journal files
 *.db
+*.db3
 *.sqlite
+*.sqlite3
 *.db-shm
 *.db-wal
+*.sqlite-shm
+*.sqlite-wal
 
-# Build
-build
+# Tool caches and test output
+.cache/
+.vite/
+coverage/
+*.tsbuildinfo
