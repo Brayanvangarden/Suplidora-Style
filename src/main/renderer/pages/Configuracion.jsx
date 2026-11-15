@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 const DEFAULT_CONFIG = {
   negocio: '',
-  moneda: 'USD',
+  moneda: 'CRC',
   tema: 'light',
   notificaciones: true,
 }
@@ -12,10 +12,10 @@ function Configuracion() {
   const [mensaje, setMensaje] = useState('')
 
   useEffect(() => {
-    const raw = window.localStorage.getItem('capsulas-config')
+    const raw = window.localStorage.getItem('beyou-config')
     if (raw) {
       try {
-        setConfig(JSON.parse(raw))
+        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(raw), moneda: 'CRC' })
       } catch (error) {
         console.warn('No se pudo leer la configuración local:', error)
       }
@@ -33,12 +33,12 @@ function Configuracion() {
 
   const guardarConfiguracion = (event) => {
     event.preventDefault()
-    window.localStorage.setItem('capsulas-config', JSON.stringify(config))
+    window.localStorage.setItem('beyou-config', JSON.stringify(config))
     setMensaje('Configuración guardada correctamente.')
   }
 
   const restaurarPredeterminados = () => {
-    window.localStorage.removeItem('capsulas-config')
+    window.localStorage.removeItem('beyou-config')
     setConfig(DEFAULT_CONFIG)
     setMensaje('Valores predeterminados restaurados.')
   }
@@ -100,7 +100,6 @@ function Configuracion() {
                 onChange={(e) => handleChange('moneda', e.target.value)}
               >
                 <option value="CRC">Colón (CRC)</option>
-                <option value="USD">Dólar (USD)</option>
               </select>
             </div>
           </section>

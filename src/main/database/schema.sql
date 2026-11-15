@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   correo        TEXT    NOT NULL DEFAULT '',
   password      TEXT    NOT NULL,
   rol           TEXT    NOT NULL CHECK(rol IN ('admin', 'vendedor')),
+  comision_porcentaje REAL NOT NULL DEFAULT 0
+                    CHECK(comision_porcentaje BETWEEN 0 AND 100),
   estado        TEXT    NOT NULL DEFAULT 'activo' CHECK(estado IN ('activo', 'inactivo')),
   failed_attempts INTEGER NOT NULL DEFAULT 0,
   locked_until  TEXT,
@@ -113,12 +115,14 @@ CREATE TABLE IF NOT EXISTS ordenes (
   fecha_creacion  TEXT    NOT NULL DEFAULT (datetime('now')),
   fecha_entrega   TEXT,
   estado          TEXT    NOT NULL DEFAULT 'pendiente'
-                    CHECK(estado IN ('pendiente','en_proceso','completada','cancelada')),
+                    CHECK(estado IN ('pendiente','en_proceso','completada','procesada','cancelada')),
   estado_pago     TEXT    NOT NULL DEFAULT 'pendiente'
                     CHECK(estado_pago IN ('pendiente','parcial','pagado')),
   total           REAL    NOT NULL DEFAULT 0,
+  descuento_orden_porcentaje REAL NOT NULL DEFAULT 0,
   notas           TEXT,
-  usuario_id      INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
+  usuario_id      INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  vendedor_id     INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 -- ════════════════════════════════════════
@@ -142,7 +146,9 @@ CREATE TABLE IF NOT EXISTS pagos (
   orden_id    INTEGER REFERENCES ordenes(id) ON DELETE SET NULL,
   monto       REAL    NOT NULL,
   tipo_pago   TEXT    NOT NULL DEFAULT 'abono' CHECK(tipo_pago IN ('pago_total','abono')),
-  metodo_pago TEXT    NOT NULL CHECK(metodo_pago IN ('efectivo','cheque','datafono','zelle')),
+  metodo_pago TEXT    NOT NULL CHECK(
+    metodo_pago IN ('efectivo','cheque','datafono','sinpe_movil','transferencia','sinpe','otro')
+  ),
   fecha_pago  TEXT    NOT NULL DEFAULT (datetime('now')),
   notas       TEXT,
   usuario_id  INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
@@ -200,6 +206,33 @@ CREATE TABLE IF NOT EXISTS facturas_detalle (
   impuesto          REAL NOT NULL DEFAULT 0,
   subtotal          REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS comisiones (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  orden_id        INTEGER NOT NULL UNIQUE REFERENCES ordenes(id) ON DELETE RESTRICT,
+  factura_id      INTEGER NOT NULL UNIQUE REFERENCES facturas(id) ON DELETE RESTRICT,
+  vendedor_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  base            REAL    NOT NULL CHECK(base >= 0),
+  porcentaje      REAL    NOT NULL CHECK(porcentaje BETWEEN 0 AND 100),
+  monto           REAL    NOT NULL CHECK(monto >= 0),
+  fecha_creacion  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_comisiones_vendedor ON comisiones(vendedor_id);
+
+CREATE TABLE IF NOT EXISTS pagos_comisiones (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  vendedor_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  monto           REAL    NOT NULL CHECK(monto > 0),
+  metodo_pago     TEXT    NOT NULL
+                    CHECK(metodo_pago IN ('efectivo','datafono','sinpe_movil')),
+  fecha_pago      TEXT    NOT NULL DEFAULT (datetime('now')),
+  notas           TEXT,
+  admin_id        INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_pagos_comisiones_vendedor
+  ON pagos_comisiones(vendedor_id, fecha_pago);
 
 -- ════════════════════════════════════════
 --  HISTORIAL DE MOVIMIENTOS (LOG)

@@ -1,6 +1,8 @@
 import { useClientes } from "../hooks/useClientes";
 import { clientesService } from "../services/clientes.service";
 import { useState, useEffect, useRef } from "react";
+import CrudFormFrame from "../components/CrudFormFrame";
+import { formatCRC } from "../utils/currency";
 
 function PencilIcon(props) {
   return (
@@ -412,7 +414,7 @@ function Clientes() {
   };
 
   const renderFormulario = (onSubmit) => (
-    <form onSubmit={onSubmit} className="form-container">
+    <form onSubmit={onSubmit} className="modal-form">
       <div className="form-grid">
         <div className="form-group">
           <label>Nombre *</label>
@@ -774,10 +776,7 @@ function Clientes() {
               <div className="detail-row">
                 <span className="detail-label">Balance pendiente</span>
                 <span className="detail-value">
-                  $
-                  {Number(clienteDetalle.balance_pendiente ?? 0).toLocaleString(
-                    "es-CR",
-                  )}
+                  {formatCRC(clienteDetalle.balance_pendiente)}
                 </span>
               </div>
               <div className="detail-row">
@@ -854,17 +853,23 @@ function Clientes() {
         </div>
       )}
       {tab === "nuevo" && (
-        <div className="form-section scrollable-form">
-          <h2>➕ Registrar Nuevo Cliente</h2>
+        <CrudFormFrame
+          title="➕ Registrar Nuevo Cliente"
+          size="modal-lg"
+          onClose={() => cerrarFormulario()}
+        >
           {renderFormulario(handleCrear)}
-        </div>
+        </CrudFormFrame>
       )}
 
       {tab === "editar" && (
-        <div className="form-section scrollable-form">
-          <h2>✏️ Editar Cliente — {clienteEdit?.nombre}</h2>
+        <CrudFormFrame
+          title={`✏️ Editar Cliente — ${clienteEdit?.nombre}`}
+          size="modal-lg"
+          onClose={() => cerrarFormulario()}
+        >
           {renderFormulario(handleActualizar)}
-        </div>
+        </CrudFormFrame>
       )}
     </div>
   );

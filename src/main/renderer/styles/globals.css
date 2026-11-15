@@ -842,6 +842,22 @@ body.theme-dark .dashboard-layout {
   gap: 1.25rem;
 }
 
+.modal-form > .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.modal-form .form-grid > .full-width {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .modal-form > .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;

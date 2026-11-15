@@ -43,16 +43,6 @@ function registerOrdenesIpc() {
     }
   });
 
-  // ── Actualizar estado de la orden ──────────────────
-  ipcMain.handle("ordenes:updateEstado", async (_, { id, estado }) => {
-    try {
-      const data = ordenesRepo.updateEstado(id, estado);
-      return { ok: true, data, message: "Estado actualizado correctamente" };
-    } catch (error) {
-      return { ok: false, message: error.message };
-    }
-  });
-
   // ── Actualizar estado de pago ──────────────────────
   ipcMain.handle("ordenes:updateEstadoPago", async (_, { id, estado_pago }) => {
     try {

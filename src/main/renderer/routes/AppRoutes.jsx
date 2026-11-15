@@ -18,6 +18,7 @@ import Facturas from "../pages/Facturas";
 import CuentasPorCobrar from "../pages/CuentasPorCobrar";
 import Usuarios from "../pages/Usuarios";
 import Reportes from "../pages/Reportes";
+import Vendedores from "../pages/Vendedores";
 import Configuracion from "../pages/Configuracion";
 
 // 🔒 Ruta protegida: redirige al login si no hay sesión
@@ -65,6 +66,7 @@ function AppRoutes() {
           }
         />
         <Route path="/reportes" element={<Reportes />} />
+        <Route path="/vendedores" element={<Vendedores />} />
         <Route path="/configuracion" element={<Configuracion />} />
       </Route>
 

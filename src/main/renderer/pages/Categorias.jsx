@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useCategorias } from "../hooks/useCategorias";
+import CrudFormFrame from "../components/CrudFormFrame";
 
 function TagIcon(props) {
   return (
@@ -357,14 +358,11 @@ function Categorias() {
       </div>
 
       {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editando ? "Editar categoría" : "Nueva categoría"}</h2>
-              <button className="modal-close" onClick={() => setModal(false)}>
-                ✕
-              </button>
-            </div>
+        <CrudFormFrame
+          title={editando ? "Editar categoría" : "Nueva categoría"}
+          size="modal-sm"
+          onClose={() => setModal(false)}
+        >
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
                 <label>Nombre *</label>
@@ -431,8 +429,7 @@ function Categorias() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </CrudFormFrame>
       )}
 
       {confirmCategoria && (

@@ -31,7 +31,7 @@ export const categoriaSchema = z.object({
 export const pagoSchema = z.object({
   cliente_id: z.number({ invalid_type_error: "Seleccione un cliente" }),
   monto: z.number().min(1, "El monto debe ser mayor a 0"),
-  metodo_pago: z.enum(["efectivo", "cheque", "datafono", "zelle"]),
+  metodo_pago: z.enum(["efectivo", "datafono", "sinpe_movil"]),
   orden_id: z.number().optional().nullable(),
   notas: z.string().optional(),
 });
@@ -41,5 +41,6 @@ export const usuarioSchema = z.object({
   usuario: z.string().min(3, "Mínimo 3 caracteres"),
   password: z.string().min(6, "Mínimo 6 caracteres").optional(),
   rol: z.enum(["admin", "vendedor"]),
+  comision_porcentaje: z.number().min(0).max(100).default(0),
   estado: z.enum(["activo", "inactivo"]).default("activo"),
 });

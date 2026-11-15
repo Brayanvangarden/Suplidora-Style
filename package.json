@@ -1,5 +1,5 @@
 {
-  "name": "capsulas",
+  "name": "beyou",
   "version": "1.0.0",
   "description": "Sistema de Inventario - Escritorio",
   "main": "src/main/main.js",
@@ -21,23 +21,25 @@
     }
   },
   "build": {
-    "appId": "com.capsulas.inventario",
-    "productName": "Capsulas Inventario",
+    "appId": "com.beyou.app",
+    "productName": "BeYou",
     "directories": {
       "output": "release"
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/logi.ico"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
-      "installerIcon": "assets/logi.ico",
-      "uninstallerIcon": "assets/logi.ico"
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     },
     "files": [
       "dist/**/*",
       "src/main/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!assets/logi.ico",
+      "!assets/logo factura.jpeg"
     ],
     "extraResources": [
       {

@@ -3,6 +3,8 @@ import { useAuth } from "../hooks/useAuth";
 import { useProductos } from "../hooks/useProductos";
 import { useCategorias } from "../hooks/useCategorias";
 import { productosService } from "../services/productos.service";
+import CrudFormFrame from "../components/CrudFormFrame";
+import { formatCRC } from "../utils/currency";
 
 function PencilIcon(props) {
   return (
@@ -164,7 +166,7 @@ function Productos() {
       "Nombre",
       "Descripción",
       "Categoría",
-      "Precio",
+      "Precio (CRC)",
       "Stock",
       "Stock mínimo",
       "SKU",
@@ -408,7 +410,7 @@ function Productos() {
   };
 
   const renderFormulario = (onSubmit) => (
-    <form onSubmit={onSubmit} className="form-container">
+    <form onSubmit={onSubmit} className="modal-form">
       <div className="form-grid">
         <div className="form-group">
           <label>Nombre *</label>
@@ -449,7 +451,7 @@ function Productos() {
         </div>
 
         <div className="form-group">
-          <label>Precio *</label>
+          <label>Precio (₡) *</label>
           <input
             required
             type="text"
@@ -651,7 +653,7 @@ function Productos() {
                 <tr>
                   <th>Nombre</th>
                   <th>Categoría</th>
-                  <th>Precio</th>
+                  <th>Precio (₡)</th>
                   <th>SKU</th>
                   <th>Stock</th>
                   <th>Acciones</th>
@@ -675,7 +677,7 @@ function Productos() {
                         p.categoria_nombre ??
                         "—"}
                     </td>
-                    <td>${parseFloat(p.precio).toLocaleString("es-CR")}</td>
+                    <td>{formatCRC(p.precio)}</td>
                     <td>
                       <strong>{p.sku || "—"}</strong>
                     </td>
@@ -767,14 +769,17 @@ function Productos() {
 
       {/* Formulario Crear / Editar (igual que Clientes) */}
       {tab !== "lista" && (
-        <div className="form-section scrollable-form">
-          <h2>
-            {editando
+        <CrudFormFrame
+          title={
+            editando
               ? `✏️ Editar Producto — ${form.nombre || ""}`
-              : "➕ Registrar Nuevo Producto"}
-          </h2>
+              : "➕ Registrar Nuevo Producto"
+          }
+          size="modal-lg"
+          onClose={() => cerrarFormulario()}
+        >
           {renderFormulario(handleSubmit)}
-        </div>
+        </CrudFormFrame>
       )}
 
       {/* Modal Detalle (solo lectura) - modal-card compacto */}
@@ -792,10 +797,9 @@ function Productos() {
                   <div className="readonly-field">{detalleProducto.nombre}</div>
                 </div>
                 <div className="form-group">
-                  <label>Precio</label>
+                  <label>Precio (₡)</label>
                   <div className="readonly-field">
-                    $
-                    {parseFloat(detalleProducto.precio).toLocaleString("es-CR")}
+                    {formatCRC(detalleProducto.precio)}
                   </div>
                 </div>
                 <div className="form-group">

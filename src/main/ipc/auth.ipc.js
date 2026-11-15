@@ -18,7 +18,7 @@ function sendResetEmail(to, code, smtpConfig) {
   return transporter.sendMail({
     from: smtpConfig.from || smtpConfig.auth.user,
     to,
-    subject: 'Recuperación de contraseña - Capsulas',
+    subject: 'Recuperación de contraseña - BeYou',
     text: `Tu código de recuperación es: ${code}\n\nUtilízalo en la aplicación para crear una nueva contraseña.`,
   })
     .then(() => ({ success: true }))

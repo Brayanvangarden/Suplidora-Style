@@ -1,20 +1,61 @@
 const { getDb } = require("../db");
 
 const EMPRESA = {
-  nombre: "Capsulas Inventario",
-  comercial: "Capsulas Inventario",
+  nombre: "BeYou",
+  comercial: "BeYou",
   identificacion: "Identificación fiscal pendiente",
   direccion: "San José, Costa Rica",
   telefono: "Teléfono pendiente",
   correo: "admin@example.com",
 };
 
+function registrarComision(db, ordenId, facturaId) {
+  const comisionExistente = db
+    .prepare("SELECT id FROM comisiones WHERE orden_id = ?")
+    .get(ordenId);
+  if (comisionExistente) return;
+
+  const orden = db
+    .prepare("SELECT vendedor_id FROM ordenes WHERE id = ?")
+    .get(ordenId);
+  if (!orden?.vendedor_id) return;
+  const factura = db
+    .prepare("SELECT total FROM facturas WHERE id = ? AND orden_id = ?")
+    .get(facturaId, ordenId);
+  if (!factura) {
+    throw new Error("No se encontró la factura para calcular comisión");
+  }
+
+  const vendedor = db
+    .prepare("SELECT comision_porcentaje FROM usuarios WHERE id = ?")
+    .get(orden.vendedor_id);
+  if (!vendedor) {
+    throw new Error("No se encontró el vendedor asignado a la orden");
+  }
+
+  const base = Number(factura.total);
+  const porcentaje = Number(vendedor.comision_porcentaje);
+  const monto =
+    Math.round(((base * porcentaje) / 100 + Number.EPSILON) * 100) / 100;
+  db.prepare(`
+    INSERT INTO comisiones
+      (orden_id, factura_id, vendedor_id, base, porcentaje, monto)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(ordenId, facturaId, orden.vendedor_id, base, porcentaje, monto);
+}
+
 function crearParaPago(pagoId, ordenId) {
   const db = getDb();
   const existente = db
     .prepare("SELECT id FROM facturas WHERE orden_id = ?")
     .get(ordenId);
-  if (existente) return existente;
+  if (existente) {
+    registrarComision(db, ordenId, existente.id);
+    db.prepare("UPDATE ordenes SET estado = 'procesada' WHERE id = ?").run(
+      ordenId,
+    );
+    return existente;
+  }
 
   const orden = db
     .prepare(
@@ -128,6 +169,10 @@ function crearParaPago(pagoId, ordenId) {
       subtotal: item.subtotal,
     });
   }
+  registrarComision(db, ordenId, result.lastInsertRowid);
+  db.prepare("UPDATE ordenes SET estado = 'procesada' WHERE id = ?").run(
+    ordenId,
+  );
   return { id: result.lastInsertRowid };
 }
 
@@ -174,7 +219,7 @@ function getHistorial(filtros = {}) {
       COALESCE(p.total_pagado, 0) AS monto_pagado,
       MAX(0, o.total - COALESCE(p.total_pagado, 0)) AS saldo,
       CASE
-        WHEN o.estado = 'completada' THEN 'finalizado'
+        WHEN o.estado IN ('completada', 'procesada') THEN 'finalizado'
         ELSE 'pendiente'
       END AS estado_orden_label,
       CASE

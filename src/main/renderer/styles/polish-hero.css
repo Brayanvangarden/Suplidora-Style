@@ -1,0 +1,284 @@
+.beauty-hero-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+@keyframes polishFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-5deg);
+  }
+}
+
+.polish-hero {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 190px;
+  height: 250px;
+  margin-top: 80px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  filter: drop-shadow(0 22px 28px rgba(45, 10, 34, 0.34));
+  animation: polishFloat 4.5s ease-in-out infinite;
+}
+
+.polish-hero:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 6px;
+  border-radius: 12px;
+}
+
+.polish-hero:hover,
+.polish-hero.is-open {
+  animation-play-state: paused;
+}
+
+.polish-bottle {
+  position: absolute;
+  left: 25px;
+  bottom: 10px;
+  width: 140px;
+  height: 134px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.48);
+  border-radius: 24px 24px 34px 34px;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(253, 164, 175, 0.13) 42%,
+    rgba(45, 10, 34, 0.34)
+  );
+  box-shadow:
+    inset 8px 0 12px rgba(255, 255, 255, 0.2),
+    inset -10px 0 16px rgba(0, 0, 0, 0.16),
+    0 10px 20px rgba(45, 10, 34, 0.2);
+}
+
+.polish-liquid {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  left: 7px;
+  height: 82px;
+  border-radius: 9px 9px 27px 27px;
+  background: linear-gradient(110deg, #fda4af 0%, #fb7185 48%, #be3560 100%);
+  transition: filter 0.35s ease;
+}
+
+.polish-liquid::before {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  left: 0;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 220, 226, 0.55);
+  content: "";
+}
+
+.polish-highlight {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  width: 12px;
+  height: 64px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.74),
+    rgba(255, 255, 255, 0.04)
+  );
+}
+
+.polish-label {
+  position: absolute;
+  top: 45px;
+  left: 30px;
+  display: grid;
+  width: 76px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+}
+
+.polish-neck {
+  position: absolute;
+  top: 91px;
+  left: 65px;
+  width: 60px;
+  height: 47px;
+  border: 2px solid rgba(255, 255, 255, 0.44);
+  border-radius: 10px 10px 5px 5px;
+  background: linear-gradient(
+    100deg,
+    rgba(253, 164, 175, 0.66),
+    rgba(190, 53, 96, 0.62)
+  );
+  box-shadow: inset 6px 0 8px rgba(255, 255, 255, 0.18);
+}
+
+.polish-neck-rim {
+  position: absolute;
+  top: -4px;
+  left: -5px;
+  width: 66px;
+  height: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 7px;
+  background: linear-gradient(90deg, #fda4af, #be3560);
+}
+
+.polish-cap {
+  position: absolute;
+  top: 8px;
+  left: 71px;
+  z-index: 2;
+  width: 48px;
+  height: 145px;
+  transition: transform 0.6s cubic-bezier(0.3, 1.25, 0.5, 1) 0.4s;
+}
+
+.polish-cap-tilt {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 35%;
+  transition: transform 0.5s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.polish-cap-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 48px;
+  height: 96px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px 10px 6px 6px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      rgba(255, 255, 255, 0.08) 5px 7px
+    ),
+    linear-gradient(100deg, #4a1239 0%, #be3560 48%, #2d0a22 100%);
+  box-shadow:
+    inset 6px 0 9px rgba(255, 255, 255, 0.16),
+    inset -7px 0 10px rgba(0, 0, 0, 0.2),
+    0 6px 12px rgba(45, 10, 34, 0.22);
+}
+
+.polish-brush {
+  position: absolute;
+  top: 92px;
+  left: 22px;
+  width: 4px;
+  height: 43px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, #f8fafc, #94a3b8);
+  opacity: 0;
+  transition: opacity 0.15s ease 0.4s;
+}
+
+.polish-brush::after {
+  position: absolute;
+  bottom: -7px;
+  left: -3px;
+  width: 10px;
+  height: 12px;
+  border-radius: 45% 45% 65% 65%;
+  background: #fb7185;
+  content: "";
+}
+
+.polish-drop {
+  position: absolute;
+  top: 90px;
+  left: 91px;
+  z-index: 1;
+  width: 7px;
+  height: 9px;
+  border-radius: 50% 50% 60% 60%;
+  background: #fb7185;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.polish-hero:hover .polish-cap,
+.polish-hero.is-open .polish-cap {
+  transform: translateY(-82px);
+  transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+.polish-hero:hover .polish-cap-tilt,
+.polish-hero.is-open .polish-cap-tilt {
+  transform: translate(62px, 6px) rotate(32deg);
+  transition: transform 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) 0.5s;
+}
+
+.polish-hero:hover .polish-brush,
+.polish-hero.is-open .polish-brush {
+  opacity: 1;
+  transition: opacity 0.1s ease;
+}
+
+.polish-hero:hover .polish-liquid,
+.polish-hero.is-open .polish-liquid {
+  filter: brightness(1.08);
+}
+
+.polish-hero:hover .polish-drop,
+.polish-hero.is-open .polish-drop {
+  animation: polishDrop 1.2s ease-in 1.3s infinite;
+}
+
+@keyframes polishDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(26px) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .polish-hero {
+    animation: none;
+  }
+
+  .polish-cap,
+  .polish-cap-tilt,
+  .polish-brush {
+    transition-duration: 0.01ms;
+    transition-delay: 0s;
+  }
+
+  .polish-drop {
+    display: none;
+  }
+}

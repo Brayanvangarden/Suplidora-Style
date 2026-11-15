@@ -3,9 +3,7 @@ import Factura from "../components/Factura";
 import { facturasService } from "../services/facturas.service";
 import { generarFacturaPdf } from "../services/facturaPdf.service";
 import { formatDate } from "../utils/formatDate";
-
-const formatoMoneda = (value) =>
-  `$${Number(value ?? 0).toLocaleString("es-CR")}`;
+import { formatCRC } from "../utils/currency";
 
 const FACTURAS_POR_PAGINA = 10;
 
@@ -128,7 +126,7 @@ function Facturas() {
         <div className="stat-card">
           <div className="stat-icon">💰</div>
           <div>
-            <h3>{formatoMoneda(resumen.saldo)}</h3>
+            <h3>{formatCRC(resumen.saldo)}</h3>
             <p>Saldo pendiente</p>
           </div>
         </div>
@@ -222,9 +220,9 @@ function Facturas() {
                     </td>
                     <td>{`N.º ${String(registro.orden_id).padStart(4, "0")}`}</td>
                     <td>{formatDate(registro.fecha_creacion)}</td>
-                    <td>{formatoMoneda(registro.total)}</td>
-                    <td>{formatoMoneda(registro.monto_pagado)}</td>
-                    <td>{formatoMoneda(registro.saldo)}</td>
+                    <td>{formatCRC(registro.total)}</td>
+                    <td>{formatCRC(registro.monto_pagado)}</td>
+                    <td>{formatCRC(registro.saldo)}</td>
                     <td>
                       {registro.factura_id ? (
                         <div className="table-actions">

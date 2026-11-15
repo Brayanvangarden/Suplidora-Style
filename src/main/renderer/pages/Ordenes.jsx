@@ -4,11 +4,14 @@ import { useOrdenes } from "../hooks/useOrdenes";
 import { useClientes } from "../hooks/useClientes";
 import { useProductos } from "../hooks/useProductos";
 import { usePagos } from "../hooks/usePagos";
+import { useUsuarios } from "../hooks/useUsuarios";
 import Factura from "../components/Factura";
+import CrudFormFrame from "../components/CrudFormFrame";
 import { clientesService } from "../services/clientes.service";
 import { generarProformaPdf } from "../services/facturaPdf.service";
 import { ordenesService } from "../services/ordenes.service";
 import { formatDate } from "../utils/formatDate";
+import { formatCRC } from "../utils/currency";
 
 const NUEVA_LINEA = { productoId: "", cantidad: "1", precio: "0" };
 const bloquearTeclasNoNumericas = (event) => {
@@ -23,32 +26,46 @@ const aceptarNumero = (value, decimal = false) => {
 const ORDENES_POR_PAGINA = 10;
 
 function Ordenes() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const {
     ordenes,
     ordenesPendientes,
     ordenesPorCobrar,
-    ordenesEnProceso,
+    ordenesProcesadas,
     resumen,
     loading,
     error,
     crearOrden,
     actualizarOrden,
-    cambiarEstado,
   } = useOrdenes();
 
   const { clientes } = useClientes();
-  const { productosActivos } = useProductos();
+  const {
+    productosActivos,
+    fetchProductos,
+    error: errorProductos,
+  } = useProductos();
   const { pagos } = usePagos();
+  const { vendedores } = useUsuarios();
 
   const [modal, setModal] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState({
     clienteId: "",
+    vendedorId: isAdmin ? "" : String(user?.id ?? ""),
     shipToClienteId: "",
     fechaEntrega: "",
     notas: "",
+    descuentoOrden: "0",
   });
+  const vendedoresDisponibles = vendedores.filter(
+    (vendedor) =>
+      vendedor.estado === "activo" ||
+      String(vendedor.id) === form.vendedorId,
+  );
+  const vendedorSeleccionado = vendedores.find(
+    (vendedor) => String(vendedor.id) === form.vendedorId,
+  );
   const [lineas, setLineas] = useState([NUEVA_LINEA]);
   const [filtroPago, setFiltroPago] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -68,11 +85,6 @@ function Ordenes() {
     () => clientes.find((c) => String(c.id) === form.clienteId),
     [clientes, form.clienteId],
   );
-  const clienteEnvioSeleccionado = useMemo(
-    () => clientes.find((c) => String(c.id) === form.shipToClienteId),
-    [clientes, form.shipToClienteId],
-  );
-
   const descuentoPorcentaje = clienteSeleccionado?.tiene_descuento
     ? Number(clienteSeleccionado.descuento_porcentaje ?? 0)
     : 0;
@@ -135,17 +147,6 @@ function Ordenes() {
     setForm((prev) => ({ ...prev, clienteId }));
   };
 
-  const handleShipToSelect = (shipToClienteId) => {
-    const cliente = clientes.find(
-      (item) => String(item.id) === shipToClienteId,
-    );
-    setForm((prev) => ({
-      ...prev,
-      shipToClienteId,
-      notas: shipToClienteId ? cliente?.direccion ?? "" : "",
-    }));
-  };
-
   const actualizarLinea = (index, cambios) => {
     setLineas((prev) =>
       prev.map((linea, i) => (i === index ? { ...linea, ...cambios } : linea)),
@@ -153,6 +154,7 @@ function Ordenes() {
   };
 
   const handleProductoSelect = async (index, productoId) => {
+    setMensaje("");
     if (
       productoId &&
       lineas.some(
@@ -195,7 +197,16 @@ function Ordenes() {
     (acc, linea) => acc + Number(linea.precio) * Number(linea.cantidad),
     0,
   );
-  const descuentoMonto = subtotalOrden * (descuentoPorcentaje / 100);
+  const descuentoOrdenPorcentaje = Number(form.descuentoOrden) || 0;
+  const descuentoOrdenMaximo = Math.max(0, 100 - descuentoPorcentaje);
+  const descuentoOrdenAplicado = Math.min(
+    descuentoOrdenPorcentaje,
+    descuentoOrdenMaximo,
+  );
+  const descuentoClienteMonto = subtotalOrden * (descuentoPorcentaje / 100);
+  const descuentoOrdenMonto =
+    subtotalOrden * (descuentoOrdenAplicado / 100);
+  const descuentoMonto = descuentoClienteMonto + descuentoOrdenMonto;
   const totalOrden = subtotalOrden - descuentoMonto;
 
   useEffect(() => {
@@ -225,9 +236,11 @@ function Ordenes() {
     setEditandoId(null);
     setForm({
       clienteId: "",
+      vendedorId: isAdmin ? "" : String(user?.id ?? ""),
       shipToClienteId: "",
       fechaEntrega: "",
       notas: "",
+      descuentoOrden: "0",
     });
     setLineas([NUEVA_LINEA]);
     setMensaje("");
@@ -247,11 +260,15 @@ function Ordenes() {
       setEditandoId(orden.id);
       setForm({
         clienteId: String(ordenData.cliente_id),
+        vendedorId: String(
+          ordenData.vendedor_id ?? (isAdmin ? "" : user?.id ?? ""),
+        ),
         shipToClienteId: ordenData.ship_to_cliente_id
           ? String(ordenData.ship_to_cliente_id)
           : "",
         fechaEntrega: ordenData.fecha_entrega || "",
         notas: ordenData.notas || "",
+        descuentoOrden: String(ordenData.descuento_orden_porcentaje ?? 0),
       });
       setLineas(detalle.length ? detalle : [NUEVA_LINEA]);
       setModal(true);
@@ -286,9 +303,11 @@ function Ordenes() {
     setEditandoId(null);
     setForm({
       clienteId: "",
+      vendedorId: isAdmin ? "" : String(user?.id ?? ""),
       shipToClienteId: "",
       fechaEntrega: "",
       notas: "",
+      descuentoOrden: "0",
     });
     setLineas([NUEVA_LINEA]);
   };
@@ -299,6 +318,19 @@ function Ordenes() {
 
     if (!form.clienteId) {
       setMensaje("Selecciona un cliente para la orden.");
+      return;
+    }
+    if (!form.vendedorId) {
+      setMensaje("Selecciona un vendedor para la orden.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(Number(form.descuentoOrden)) ||
+      Number(form.descuentoOrden) < 0 ||
+      descuentoPorcentaje + Number(form.descuentoOrden) > 100
+    ) {
+      setMensaje("La suma de los descuentos no puede superar el 100%.");
       return;
     }
 
@@ -364,13 +396,16 @@ function Ordenes() {
       if (editandoId) {
         const respuesta = await actualizarOrden(editandoId, {
           cliente_id: Number(form.clienteId),
+          vendedor_id: Number(form.vendedorId),
           ship_to_cliente_id: form.shipToClienteId
             ? Number(form.shipToClienteId)
             : null,
           fecha_entrega: form.fechaEntrega || null,
           notas: form.notas,
           usuario_id: user?.id,
-          descuento_porcentaje: descuentoPorcentaje,
+          descuento_porcentaje:
+            descuentoPorcentaje + descuentoOrdenPorcentaje,
+          descuento_orden_porcentaje: descuentoOrdenPorcentaje,
           detalle,
         });
 
@@ -379,20 +414,24 @@ function Ordenes() {
           return;
         }
 
+        await fetchProductos();
         cerrarModal();
         setMensaje(
-          `Orden N.º ${String(respuesta.data.id).padStart(4, "0")} creada correctamente.`,
+          `Orden N.º ${String(respuesta.data.id).padStart(4, "0")} actualizada correctamente.`,
         );
       } else {
         const respuesta = await crearOrden({
           cliente_id: Number(form.clienteId),
+          vendedor_id: Number(form.vendedorId),
           ship_to_cliente_id: form.shipToClienteId
             ? Number(form.shipToClienteId)
             : null,
           fecha_entrega: form.fechaEntrega || null,
           notas: form.notas,
           usuario_id: user?.id,
-          descuento_porcentaje: descuentoPorcentaje,
+          descuento_porcentaje:
+            descuentoPorcentaje + descuentoOrdenPorcentaje,
+          descuento_orden_porcentaje: descuentoOrdenPorcentaje,
           detalle,
         });
 
@@ -401,24 +440,12 @@ function Ordenes() {
           return;
         }
 
+        await fetchProductos();
         cerrarModal();
         setMensaje("Orden creada correctamente.");
       }
     } finally {
       setGuardando(false);
-    }
-  };
-
-  const actualizarEstadoOrden = async (orden) => {
-    const siguienteEstado =
-      orden.estado === "pendiente"
-        ? "en_proceso"
-        : orden.estado === "en_proceso"
-          ? "completada"
-          : orden.estado;
-
-    if (siguienteEstado !== orden.estado) {
-      await cambiarEstado(orden.id, siguienteEstado);
     }
   };
 
@@ -442,6 +469,7 @@ function Ordenes() {
       </div>
 
       {error && <p className="message-error">{error}</p>}
+      {errorProductos && <p className="message-error">{errorProductos}</p>}
       {mensaje && !modal && (
         <div className="message-success-banner">✅ {mensaje}</div>
       )}
@@ -455,10 +483,10 @@ function Ordenes() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">⚙️</div>
+          <div className="stat-icon">✅</div>
           <div className="stat-info">
-            <h3>{ordenesEnProceso.length}</h3>
-            <p>En proceso</p>
+            <h3>{ordenesProcesadas.length}</h3>
+            <p>Procesadas</p>
           </div>
         </div>
         <div className="stat-card">
@@ -512,98 +540,83 @@ function Ordenes() {
           </p>
         ) : (
           <>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>N.º Orden</th>
-                  <th>Cliente</th>
-                  <th>Total</th>
-                  <th>Pago</th>
-                  <th>Fecha de envío</th>
-                  <th>Creado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ordenesVisibles.map((orden) => {
-                  const saldo = saldoPorOrden.get(orden.id);
-                  return (
-                    <tr key={orden.id}>
-                      <td className="orden-numero">
-                        N.º {String(orden.id).padStart(4, "0")}
-                      </td>
-                      <td>
-                        <strong>{orden.cliente_nombre ?? "Sin cliente"}</strong>
-                        {orden.cliente_empresa && (
-                          <>
-                            <br />
-                            <small className="text-muted">
-                              {orden.cliente_empresa}
-                            </small>
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        ${Number(orden.total ?? 0).toLocaleString("es-CR")}
-                      </td>
-                      <td>
-                        <span className={`pill ${pillPago(orden.estado_pago)}`}>
-                          {orden.estado_pago}
-                        </span>
-                        {orden.estado_pago !== "pagado" &&
-                          saldo?.saldoPendiente > 0 && (
-                            <div className="pago-faltante">
-                              Faltan $
-                              {saldo.saldoPendiente.toLocaleString("es-CR")}
-                            </div>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>N.º Orden</th>
+                    <th>Cliente</th>
+                    <th>Vendedor</th>
+                    <th>Total</th>
+                    <th>Pago</th>
+                    <th>Fecha de envío</th>
+                    <th>Creado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordenesVisibles.map((orden) => {
+                    const saldo = saldoPorOrden.get(orden.id);
+                    return (
+                      <tr key={orden.id}>
+                        <td className="orden-numero">
+                          N.º {String(orden.id).padStart(4, "0")}
+                        </td>
+                        <td>
+                          <strong>{orden.cliente_nombre ?? "Sin cliente"}</strong>
+                          {orden.cliente_empresa && (
+                            <>
+                              <br />
+                              <small className="text-muted">
+                                {orden.cliente_empresa}
+                              </small>
+                            </>
                           )}
-                      </td>
-                      <td>
-                        {formatDate(orden.fecha_entrega)}
-                      </td>
-                      <td>
-                        {formatDate(orden.fecha_creacion)}
-                      </td>
-                      <td className="action-buttons">
-                        <button
-                          className="btn-action-outline"
-                          type="button"
-                          onClick={() => abrirEditar(orden)}
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          className="btn-action-outline"
-                          type="button"
-                          onClick={() => generarProforma(orden)}
-                        >
-                          🧾 Generar PROFORMA
-                        </button>
-                        <button
-                          className="btn-action-outline"
-                          type="button"
-                          onClick={() => verProforma(orden)}
-                        >
-                          👁️ Ver PROFORMA
-                        </button>
-                        {(orden.estado === "pendiente" ||
-                          orden.estado === "en_proceso") && (
+                        </td>
+                        <td>{orden.vendedor_nombre || "Sin asignar"}</td>
+                        <td>{formatCRC(orden.total)}</td>
+                        <td>
+                          <span className={`pill ${pillPago(orden.estado_pago)}`}>
+                            {orden.estado_pago}
+                          </span>
+                          {orden.estado_pago !== "pagado" &&
+                            saldo?.saldoPendiente > 0 && (
+                              <div className="pago-faltante">
+                                Faltan {formatCRC(saldo.saldoPendiente)}
+                              </div>
+                            )}
+                        </td>
+                        <td>{formatDate(orden.fecha_entrega)}</td>
+                        <td>{formatDate(orden.fecha_creacion)}</td>
+                        <td className="action-buttons">
                           <button
                             className="btn-action-outline"
                             type="button"
-                            onClick={() => actualizarEstadoOrden(orden)}
+                            onClick={() => abrirEditar(orden)}
                           >
-                            {orden.estado === "pendiente"
-                              ? "Iniciar"
-                              : "Completar"}
+                            ✏️ Editar
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          <button
+                            className="btn-action-outline"
+                            type="button"
+                            onClick={() => generarProforma(orden)}
+                          >
+                            🧾 Generar PROFORMA
+                          </button>
+                          <button
+                            className="btn-action-outline"
+                            type="button"
+                            onClick={() => verProforma(orden)}
+                          >
+                            👁️ Ver PROFORMA
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
             {totalPaginas > 1 && (
               <nav className="pagination" aria-label="Paginación de órdenes">
                 <button
@@ -645,25 +658,18 @@ function Ordenes() {
       </div>
 
       {modal && (
-        <div className="modal-overlay" onClick={cerrarModal}>
-          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                {editandoId
-                  ? `Editar orden N.º ${String(editandoId).padStart(4, "0")}`
-                  : "Nueva orden"}
-              </h2>
-              <button
-                className="modal-close"
-                type="button"
-                onClick={cerrarModal}
-              >
-                ✕
-              </button>
-            </div>
+        <CrudFormFrame
+          title={
+            editandoId
+              ? `Editar orden N.º ${String(editandoId).padStart(4, "0")}`
+              : "Nueva orden"
+          }
+          size="modal-lg"
+          onClose={cerrarModal}
+        >
             <form className="modal-form" onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Bill To / Cliente de facturación *</label>
+                <label>Cliente *</label>
                 <select
                   required
                   value={form.clienteId}
@@ -683,47 +689,70 @@ function Ordenes() {
               </div>
 
               <div className="form-group">
-                <label>Dirección de facturación</label>
-                <div className="readonly-field">
-                  {clienteSeleccionado?.direccion || "Sin dirección registrada"}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Ship To / Cliente destinatario</label>
+                <label htmlFor="orden-vendedor">Vendedor *</label>
                 <select
-                  value={form.shipToClienteId}
-                  onChange={(event) => handleShipToSelect(event.target.value)}
+                  id="orden-vendedor"
+                  required
+                  value={form.vendedorId}
+                  disabled={!isAdmin}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      vendedorId: event.target.value,
+                    }))
+                  }
                 >
-                  <option value="">Sin cliente destinatario</option>
-                  {clientes.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nombre}{" "}
-                      {cliente.empresa ? `- ${cliente.empresa}` : ""}
+                  <option value="">Selecciona un vendedor</option>
+                  {vendedoresDisponibles.map((vendedor) => (
+                    <option key={vendedor.id} value={vendedor.id}>
+                      {vendedor.nombre}
                     </option>
                   ))}
                 </select>
+                {form.vendedorId && (
+                  <small className="field-help">
+                    Vendedor asignado:{" "}
+                    {vendedorSeleccionado?.nombre || "cargando información..."}
+                  </small>
+                )}
+                {!form.vendedorId && editandoId && (
+                  <small className="field-help">
+                    Esta orden todavía no tiene vendedor asignado.
+                  </small>
+                )}
+                {!isAdmin && !form.vendedorId && (
+                  <small className="field-help">
+                    La orden quedará asignada a tu usuario.
+                  </small>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Dirección de envío seleccionada</label>
-                <div className="readonly-field">
-                  {clienteEnvioSeleccionado?.direccion ||
-                    (form.shipToClienteId
-                      ? "Sin dirección registrada"
-                      : "Puedes ingresar una dirección manualmente")}
+              <div className="settings-section">
+                <div className="form-group">
+                  <label htmlFor="descuento-orden">
+                    Descuento adicional de la orden (%)
+                  </label>
+                  <input
+                    id="descuento-orden"
+                    required
+                    type="number"
+                    min="0"
+                    max={descuentoOrdenMaximo}
+                    step="0.01"
+                    value={form.descuentoOrden}
+                    onKeyDown={bloquearTeclasNoNumericas}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        descuentoOrden: e.target.value,
+                      }))
+                    }
+                  />
+                  <small className="field-help">
+                    Se suma al descuento del cliente ({descuentoPorcentaje}%).
+                    Máximo adicional: {descuentoOrdenMaximo}%.
+                  </small>
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Fecha de entrega</label>
-                <input
-                  type="date"
-                  value={form.fechaEntrega}
-                  onChange={(e) =>
-                    setForm({ ...form, fechaEntrega: e.target.value })
-                  }
-                />
               </div>
 
               <div className="settings-section">
@@ -740,30 +769,29 @@ function Ordenes() {
                         }
                       >
                         <option value="">Selecciona un producto</option>
-                        {productosActivos.map((productoItem) => (
-                          <option
-                            key={productoItem.id}
-                            value={productoItem.id}
-                            disabled={
-                              Number(productoItem.cantidad) <= 0 ||
-                              lineas.some(
-                                (otraLinea, otroIndice) =>
-                                  otroIndice !== index &&
-                                  otraLinea.productoId ===
-                                    String(productoItem.id),
-                              )
-                            }
-                          >
-                            {productoItem.nombre}{" "}
-                            {productoItem.cantidad <= 0
-                              ? "(Agotado)"
-                              : `(stock: ${productoItem.cantidad})`}
-                          </option>
-                        ))}
+                        {productosActivos.map((productoItem) => {
+                          const yaAgregado = lineas.some(
+                            (otraLinea, otroIndice) =>
+                              otroIndice !== index &&
+                              otraLinea.productoId === String(productoItem.id),
+                          );
+                          const stock = Number(productoItem.cantidad) || 0;
+                          return (
+                            <option
+                              key={productoItem.id}
+                              value={productoItem.id}
+                              disabled={stock <= 0 || yaAgregado}
+                            >
+                              {productoItem.nombre} · Stock: {stock}
+                              {stock <= 0 ? " (Agotado)" : ""}
+                              {yaAgregado ? " (Ya agregado)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Stock disponible</label>
+                      <label>Stock actual</label>
                       <div className="readonly-field">
                         {linea.productoId
                           ? (productosActivos.find(
@@ -800,7 +828,7 @@ function Ordenes() {
                       />
                     </div>
                     <div className="form-group">
-                      <label>Precio unitario</label>
+                      <label>Precio unitario (₡)</label>
                       <input
                         required
                         type="text"
@@ -820,7 +848,9 @@ function Ordenes() {
                       <input
                         type="text"
                         readOnly
-                        value={`$${(Number(linea.precio) * Number(linea.cantidad)).toLocaleString("es-CR")}`}
+                        value={formatCRC(
+                          Number(linea.precio) * Number(linea.cantidad),
+                        )}
                       />
                     </div>
                     <button
@@ -844,17 +874,25 @@ function Ordenes() {
               <div className="orden-resumen">
                 <div className="orden-resumen-row">
                   <span>Subtotal</span>
-                  <span>${subtotalOrden.toLocaleString("es-CR")}</span>
+                  <span>{formatCRC(subtotalOrden)}</span>
                 </div>
                 {descuentoPorcentaje > 0 && (
                   <div className="orden-resumen-row orden-resumen-descuento">
                     <span>Descuento cliente ({descuentoPorcentaje}%)</span>
-                    <span>−${descuentoMonto.toLocaleString("es-CR")}</span>
+                    <span>−{formatCRC(descuentoClienteMonto)}</span>
+                  </div>
+                )}
+                {descuentoOrdenAplicado > 0 && (
+                  <div className="orden-resumen-row orden-resumen-descuento">
+                    <span>
+                      Descuento adicional ({descuentoOrdenAplicado}%)
+                    </span>
+                    <span>−{formatCRC(descuentoOrdenMonto)}</span>
                   </div>
                 )}
                 <div className="orden-resumen-row orden-resumen-total">
                   <span>Total orden</span>
-                  <span>${totalOrden.toLocaleString("es-CR")}</span>
+                  <span>{formatCRC(totalOrden)}</span>
                 </div>
               </div>
 
@@ -881,8 +919,7 @@ function Ordenes() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </CrudFormFrame>
       )}
       {proformaPreview && (
         <Factura

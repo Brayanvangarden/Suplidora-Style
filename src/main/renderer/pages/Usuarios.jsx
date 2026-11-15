@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useUsuarios } from "../hooks/useUsuarios";
+import CrudFormFrame from "../components/CrudFormFrame";
 
 function Icon({ children, ...props }) {
   return (
@@ -65,6 +66,7 @@ const EMPTY = {
   usuario: "",
   password: "",
   rol: "vendedor",
+  comisionPorcentaje: "0",
   estado: "activo",
 };
 
@@ -139,6 +141,7 @@ function Usuarios() {
       usuario: usuario.usuario,
       password: "",
       rol: usuario.rol,
+      comisionPorcentaje: String(usuario.comision_porcentaje ?? 0),
       estado: usuario.estado,
     });
     setMensaje("");
@@ -159,11 +162,23 @@ function Usuarios() {
       setMensaje("Completa nombre, usuario y rol.");
       return;
     }
+    const comisionPorcentaje = Number(form.comisionPorcentaje);
+    if (
+      form.rol === "vendedor" &&
+      (!Number.isFinite(comisionPorcentaje) ||
+        comisionPorcentaje < 0 ||
+        comisionPorcentaje > 100)
+    ) {
+      setMensaje("La comisión debe estar entre 0 y 100.");
+      return;
+    }
 
     const datos = {
       nombre: form.nombre.trim(),
       usuario: form.usuario.trim(),
       rol: form.rol,
+      comision_porcentaje:
+        form.rol === "vendedor" ? comisionPorcentaje : 0,
       estado: form.estado,
     };
     const resultado = editandoId
@@ -311,6 +326,7 @@ function Usuarios() {
                   <th>Nombre</th>
                   <th>Usuario</th>
                   <th>Rol</th>
+                  <th>Comisión</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -321,6 +337,11 @@ function Usuarios() {
                     <td>{usuario.nombre}</td>
                     <td>{usuario.usuario}</td>
                     <td>{usuario.rol}</td>
+                    <td>
+                      {usuario.rol === "vendedor"
+                        ? `${Number(usuario.comision_porcentaje ?? 0)}%`
+                        : "—"}
+                    </td>
                     <td>
                       <span
                         className={`badge ${usuario.estado === "activo" ? "badge-success" : "badge-danger"}`}
@@ -412,18 +433,10 @@ function Usuarios() {
       </div>
 
       {modalAbierto && (
-        <div className="modal-overlay" onClick={cerrarModal}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editandoId ? "Editar usuario" : "Nuevo usuario"}</h2>
-              <button
-                className="modal-close"
-                type="button"
-                onClick={cerrarModal}
-              >
-                x
-              </button>
-            </div>
+        <CrudFormFrame
+          title={editandoId ? "Editar usuario" : "Nuevo usuario"}
+          onClose={cerrarModal}
+        >
             <form className="modal-form" onSubmit={handleSubmit}>
               <div className="form-group">
                 <label>Nombre *</label>
@@ -482,6 +495,26 @@ function Usuarios() {
                   <option value="inactivo">inactivo</option>
                 </select>
               </div>
+              {form.rol === "vendedor" && (
+                <div className="form-group">
+                  <label htmlFor="usuario-comision">Comisión por venta (%)</label>
+                  <input
+                    id="usuario-comision"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.comisionPorcentaje}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        comisionPorcentaje: event.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+              )}
               <div className="modal-footer">
                 <button
                   className="btn-secondary"
@@ -495,8 +528,7 @@ function Usuarios() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </CrudFormFrame>
       )}
 
       {passwordState.abierto && (

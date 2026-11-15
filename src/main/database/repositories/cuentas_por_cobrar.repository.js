@@ -109,6 +109,7 @@ function getEstadoCuenta(clienteId, mes = "") {
       numero_factura: pago.numero_factura,
       tipo: "pago",
       descripcion: `Pago - ${pago.metodo_pago}`,
+      metodo_pago: pago.metodo_pago,
       monto: -Number(pago.monto),
     })),
   ].sort((a, b) => {

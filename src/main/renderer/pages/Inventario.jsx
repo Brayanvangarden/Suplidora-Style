@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useInventario } from "../hooks/useInventario";
 import { useProductos } from "../hooks/useProductos";
 import { useAuthStore } from "../store/auth.store";
-import { formatDateInput, formatDateTime } from "../utils/formatDate";
+import { formatDateTime } from "../utils/formatDate";
 
 function ArrowDownIcon(props) {
   return (
@@ -40,69 +40,79 @@ function ArrowUpIcon(props) {
     </svg>
   );
 }
-function AlertIcon(props) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-
 const EMPTY_FORM = { producto_id: "", cantidad: "", observaciones: "" };
 const MOVIMIENTOS_POR_PAGINA = 10;
+
+const getEstadoStock = (producto) => {
+  const cantidad = Number(producto.cantidad) || 0;
+  const minimo = Number(producto.stock_minimo) || 0;
+  if (cantidad <= 0) return "agotado";
+  if (cantidad <= minimo) return "bajo";
+  return "disponible";
+};
+
+const formatCantidad = (cantidad) =>
+  (Number(cantidad) || 0).toLocaleString("es-CR", {
+    maximumFractionDigits: 2,
+  });
 
 function Inventario() {
   const { user } = useAuthStore();
   const {
     movimientos,
-    loading,
-    error,
+    loading: cargandoMovimientos,
+    error: errorInventario,
     fetchMovimientos,
     registrarEntrada,
     registrarSalida,
   } = useInventario();
-  const { productosActivos } = useProductos();
+  const {
+    productosActivos,
+    loading: cargandoProductos,
+    error: errorProductos,
+    fetchProductos,
+  } = useProductos();
 
-  const [tab, setTab] = useState("movimientos"); // movimientos | entrada | salida
+  const [tab, setTab] = useState("existencias");
   const [formE, setFormE] = useState(EMPTY_FORM);
   const [formS, setFormS] = useState(EMPTY_FORM);
   const [loadingOp, setLoadingOp] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos"); // todos | entrada | salida
   const [filtroProducto, setFiltroProducto] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroStock, setFiltroStock] = useState("todos");
   const [pagina, setPagina] = useState(1);
 
-  const productosStockBajo = useMemo(
-    () =>
-      productosActivos.filter(
-        (p) => Number(p.cantidad) <= Number(p.stock_minimo ?? 0),
-      ),
-    [productosActivos],
-  );
-
-  const hoy = formatDateInput(new Date());
-  const resumenHoy = useMemo(() => {
-    const deHoy = movimientos.filter(
-      (m) => formatDateInput(m.fecha) === hoy,
+  const resumenStock = useMemo(() => {
+    const agotados = productosActivos.filter(
+      (producto) => getEstadoStock(producto) === "agotado",
+    ).length;
+    const bajos = productosActivos.filter(
+      (producto) => getEstadoStock(producto) === "bajo",
+    ).length;
+    const unidades = productosActivos.reduce(
+      (total, producto) => total + (Number(producto.cantidad) || 0),
+      0,
     );
-    return {
-      entradas: deHoy.filter((m) => m.tipo === "entrada").length,
-      salidas: deHoy.filter((m) => m.tipo === "salida").length,
-      total: deHoy.length,
-    };
-  }, [movimientos, hoy]);
+    return { agotados, bajos, unidades };
+  }, [productosActivos]);
+
+  const productosFiltrados = useMemo(() => {
+    const consulta = busqueda.trim().toLocaleLowerCase();
+    return productosActivos.filter((producto) => {
+      const coincideTexto =
+        !consulta ||
+        [
+          producto.nombre,
+          producto.sku,
+          producto.categoria_nombre,
+        ].some((valor) => String(valor ?? "").toLocaleLowerCase().includes(consulta));
+      const coincideStock =
+        filtroStock === "todos" || getEstadoStock(producto) === filtroStock;
+      return coincideTexto && coincideStock;
+    });
+  }, [productosActivos, busqueda, filtroStock]);
 
   const movimientosFiltrados = movimientos.filter((m) => {
     const coincideTipo = filtroTipo === "todos" || m.tipo === filtroTipo;
@@ -145,8 +155,8 @@ function Inventario() {
         return;
       }
       setFormE(EMPTY_FORM);
-      setTab("movimientos");
-      fetchMovimientos();
+      setTab("existencias");
+      await Promise.all([fetchMovimientos(), fetchProductos()]);
     } finally {
       setLoadingOp(false);
     }
@@ -168,74 +178,198 @@ function Inventario() {
         return;
       }
       setFormS(EMPTY_FORM);
-      setTab("movimientos");
-      fetchMovimientos();
+      setTab("existencias");
+      await Promise.all([fetchMovimientos(), fetchProductos()]);
     } finally {
       setLoadingOp(false);
     }
   };
 
-  if (loading) return <div className="page-loading">Cargando inventario…</div>;
+  if (cargandoMovimientos || cargandoProductos) {
+    return <div className="page-loading">Cargando inventario…</div>;
+  }
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1>📦 Inventario</h1>
+        <div>
+          <h1>📦 Inventario</h1>
+          <p>Consulta las existencias actuales de cada producto.</p>
+        </div>
+        <div className="inventory-actions">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setMensaje("");
+              setTab("entrada");
+            }}
+          >
+            <ArrowDownIcon /> Registrar entrada
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setMensaje("");
+              setTab("salida");
+            }}
+          >
+            <ArrowUpIcon /> Registrar salida
+          </button>
+        </div>
       </div>
 
-      {error && <p className="message-error">{error}</p>}
+      {errorInventario && <p className="message-error">{errorInventario}</p>}
+      {errorProductos && <p className="message-error">{errorProductos}</p>}
       {mensaje && ["entrada", "salida"].includes(tab) && (
         <p className="message-error">{mensaje}</p>
       )}
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">📥</div>
+          <div className="stat-icon info">📦</div>
           <div className="stat-info">
-            <h3>{resumenHoy.entradas}</h3>
-            <p>Entradas hoy</p>
+            <h3>{productosActivos.length}</h3>
+            <p>Productos activos</p>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">📤</div>
+          <div className="stat-icon success">🧮</div>
           <div className="stat-info">
-            <h3>{resumenHoy.salidas}</h3>
-            <p>Salidas hoy</p>
+            <h3>{formatCantidad(resumenStock.unidades)}</h3>
+            <p>Unidades en existencia</p>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🔄</div>
+          <div className="stat-icon warning">⚠️</div>
           <div className="stat-info">
-            <h3>{resumenHoy.total}</h3>
-            <p>Movimientos hoy</p>
+            <h3>{resumenStock.bajos}</h3>
+            <p>Productos bajo el mínimo</p>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">⚠️</div>
+          <div className="stat-icon danger">⛔</div>
           <div className="stat-info">
-            <h3>{productosStockBajo.length}</h3>
-            <p>Productos con stock bajo</p>
+            <h3>{resumenStock.agotados}</h3>
+            <p>Productos agotados</p>
           </div>
         </div>
       </div>
 
-      {productosStockBajo.length > 0 && (
-        <div className="stock-bajo-alerta">
-          <div className="stock-bajo-header">
-            <AlertIcon /> Productos con stock bajo o agotado
+      <div className="inventory-tabs" role="tablist" aria-label="Vistas de inventario">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "existencias"}
+          className={`btn-filtro ${tab === "existencias" ? "active" : ""}`}
+          onClick={() => setTab("existencias")}
+        >
+          Existencias
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "movimientos"}
+          className={`btn-filtro ${tab === "movimientos" ? "active" : ""}`}
+          onClick={() => setTab("movimientos")}
+        >
+          Historial de movimientos
+        </button>
+      </div>
+
+      {tab === "existencias" && (
+        <div className="list-container">
+          <div className="inventory-toolbar">
+            <input
+              type="search"
+              className="search-input"
+              aria-label="Buscar producto en inventario"
+              placeholder="Buscar por producto, SKU o categoría…"
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+            />
+            <select
+              className="filtro-select"
+              aria-label="Filtrar por estado del stock"
+              value={filtroStock}
+              onChange={(event) => setFiltroStock(event.target.value)}
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="disponible">Disponible</option>
+              <option value="bajo">Bajo el mínimo</option>
+              <option value="agotado">Agotado</option>
+            </select>
           </div>
-          <div className="stock-bajo-lista">
-            {productosStockBajo.map((p) => (
-              <span key={p.id} className="pill pill-no">
-                {p.nombre} · {p.cantidad}/{p.stock_minimo}
-              </span>
-            ))}
-          </div>
+
+          {productosActivos.length === 0 ? (
+            <p className="empty-state">No hay productos activos para mostrar.</p>
+          ) : productosFiltrados.length === 0 ? (
+            <p className="empty-state">
+              No hay productos que coincidan con la búsqueda o el filtro.
+            </p>
+          ) : (
+            <div className="table-wrapper">
+              <table className="data-table inventory-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>SKU</th>
+                    <th>Categoría</th>
+                    <th>Existencia actual</th>
+                    <th>Stock mínimo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productosFiltrados.map((producto) => {
+                    const estado = getEstadoStock(producto);
+                    return (
+                      <tr
+                        key={producto.id}
+                        className={estado === "disponible" ? "" : "fila-alerta"}
+                      >
+                        <td>
+                          <strong>{producto.nombre}</strong>
+                        </td>
+                        <td>{producto.sku || "—"}</td>
+                        <td>{producto.categoria_nombre || "—"}</td>
+                        <td>
+                          <strong className="inventory-quantity">
+                            {formatCantidad(producto.cantidad)}
+                          </strong>
+                        </td>
+                        <td>{formatCantidad(producto.stock_minimo)}</td>
+                        <td>
+                          <span
+                            className={`pill ${
+                              estado === "disponible"
+                                ? "pill-si"
+                                : estado === "bajo"
+                                  ? "pill-warn"
+                                  : "pill-no"
+                            }`}
+                          >
+                            {estado === "disponible"
+                              ? "Disponible"
+                              : estado === "bajo"
+                                ? "Bajo el mínimo"
+                                : "Agotado"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {tab === "movimientos" && (
         <div className="list-container">
+          <h2 className="inventory-section-title">Historial de movimientos</h2>
           <div className="filtros">
             <button
               type="button"
@@ -374,7 +508,7 @@ function Inventario() {
                 }
               >
                 <option value="">Seleccionar producto</option>
-                {productos.map((p) => (
+                {productosActivos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre} (stock: {p.cantidad})
                   </option>
@@ -439,7 +573,7 @@ function Inventario() {
                 }
               >
                 <option value="">Seleccionar producto</option>
-                {productos.map((p) => (
+                {productosActivos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre} (stock: {p.cantidad})
                   </option>

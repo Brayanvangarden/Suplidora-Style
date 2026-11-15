@@ -90,8 +90,6 @@ contextBridge.exposeInMainWorld("api", {
     getById: (id) => ipcRenderer.invoke("ordenes:getById", id),
     create: (data) => ipcRenderer.invoke("ordenes:create", data),
     update: (id, data) => ipcRenderer.invoke("ordenes:update", { id, data }),
-    updateEstado: (id, estado) =>
-      ipcRenderer.invoke("ordenes:updateEstado", { id, estado }),
     updateEstadoPago: (id, estadoPago) =>
       ipcRenderer.invoke("ordenes:updateEstadoPago", {
         id,
@@ -146,5 +144,16 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("usuarios:changePassword", data),
     toggleEstado: (id) => ipcRenderer.invoke("usuarios:toggleEstado", id),
     delete: (id) => ipcRenderer.invoke("usuarios:delete", id),
+  },
+
+  // ══════════════════════════════════════
+  //  VENDEDORES
+  // ══════════════════════════════════════
+  vendedores: {
+    getResumen: (data) => ipcRenderer.invoke("vendedores:getResumen", data),
+    getDetalle: (data) => ipcRenderer.invoke("vendedores:getDetalle", data),
+    getPagos: (data) => ipcRenderer.invoke("vendedores:getPagos", data),
+    registrarPago: (data) =>
+      ipcRenderer.invoke("vendedores:registrarPago", data),
   },
 });

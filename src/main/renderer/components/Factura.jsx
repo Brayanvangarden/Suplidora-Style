@@ -5,16 +5,16 @@ import {
   imprimirFactura,
 } from "../services/facturaPdf.service";
 import { useState } from "react";
+import { formatCRC } from "../utils/currency";
+import { formatDate } from "../utils/formatDate";
 
 function moneda(value) {
-  return `$${Number(value ?? 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return formatCRC(value);
 }
 
-function formatNumeroOrden(id) {
-  return `No. ${String(Number(id ?? 0)).padStart(4, "0")}`;
+function formatNumeroOrden(id, esProforma = false) {
+  const prefijo = esProforma ? "N.º " : "No. ";
+  return `${prefijo}${String(Number(id ?? 0)).padStart(4, "0")}`;
 }
 
 export default function Factura({
@@ -91,14 +91,14 @@ export default function Factura({
               }
             }}
           >
-            {esProforma ? "Download Proforma PDF" : "Download PDF"}
+            {esProforma ? "Descargar proforma (PDF)" : "Download PDF"}
           </button>
           <button
             type="button"
             className="btn-secondary factura-cerrar"
             onClick={onClose}
           >
-            Close
+            {esProforma ? "Cerrar" : "Close"}
           </button>
         </div>
 
@@ -110,42 +110,78 @@ export default function Factura({
               <img
                 className="factura-brand-logo"
                 src={COMPANY_LOGO_URL}
-                alt="Logo de Logicaps"
+                alt="Logo de BeYou"
               />
-              <p>NATUR VITALIA LLC</p>
-              <p>7980 W 25th Ct. Hialeah, FL 33016</p>
-              <p>Tel. (754) 209-3195 / (954) 889-4019</p>
+              {esProforma ? (
+                <p>Suplidora y academia de belleza Style</p>
+              ) : (
+                <>
+                  <p>NATUR VITALIA LLC</p>
+                  <p>7980 W 25th Ct. Hialeah, FL 33016</p>
+                  <p>Tel. (754) 209-3195 / (954) 889-4019</p>
+                </>
+              )}
             </div>
             <div className="factura-invoice-meta">
-              <strong>{esProforma ? "QUOTATION" : "INVOICE"}</strong>
-              <span>{formatNumeroOrden(factura.orden_id ?? factura.id)}</span>
+              <strong>{esProforma ? "PROFORMA" : "INVOICE"}</strong>
+              <span>
+                {esProforma ? "Orden " : ""}
+                {formatNumeroOrden(
+                  factura.orden_id ?? factura.id,
+                  esProforma,
+                )}
+              </span>
             </div>
           </header>
 
-          <div className="factura-box-grid">
-            <div className="factura-box">
-              <h2>Bill to:</h2>
-              {billToLines.map((line, index) => (
-                <p key={`${index}-${line}`}>{line}</p>
-              ))}
-            </div>
-            <div className="factura-box">
-              <h2>Ship to:</h2>
+          {esProforma ? (
+            <div className="factura-detalles-orden">
               <p>
-                {factura.ship_to_direccion ||
-                  factura.notas ||
-                  "Address not provided"}
+                <strong>Cliente:</strong>{" "}
+                {factura.cliente_nombre || "Sin cliente"}
               </p>
+              <p>
+                <strong>Fecha de emisión:</strong>{" "}
+                {formatDate(factura.fecha_creacion)}
+              </p>
+              {factura.fecha_entrega && (
+                <p>
+                  <strong>Fecha de entrega:</strong>{" "}
+                  {formatDate(factura.fecha_entrega)}
+                </p>
+              )}
+              {factura.notas && (
+                <p>
+                  <strong>Notas:</strong> {factura.notas}
+                </p>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="factura-box-grid">
+              <div className="factura-box">
+                <h2>Bill to:</h2>
+                {billToLines.map((line, index) => (
+                  <p key={`${index}-${line}`}>{line}</p>
+                ))}
+              </div>
+              <div className="factura-box">
+                <h2>Ship to:</h2>
+                <p>
+                  {factura.ship_to_direccion ||
+                    factura.notas ||
+                    "Address not provided"}
+                </p>
+              </div>
+            </div>
+          )}
 
           <table className="factura-tabla factura-tabla-proforma">
             <thead>
               <tr>
-                <th>Item No.</th>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
+                <th>{esProforma ? "Código" : "Item No."}</th>
+                <th>{esProforma ? "Descripción" : "Description"}</th>
+                <th>{esProforma ? "Cantidad" : "Quantity"}</th>
+                <th>{esProforma ? "Precio unitario" : "Unit Price"}</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -159,7 +195,9 @@ export default function Factura({
                       "—"}
                   </td>
                   <td>
-                    {item.descripcion || item.producto_nombre || "Product"}
+                    {item.descripcion ||
+                      item.producto_nombre ||
+                      (esProforma ? "Producto" : "Product")}
                   </td>
                   <td>{item.cantidad}</td>
                   <td>{moneda(item.precio_unitario ?? item.precio ?? 0)}</td>
@@ -176,59 +214,69 @@ export default function Factura({
             </div>
             {descuentos > 0 && (
               <div className="factura-totales-row">
-                <span>Discount</span>
+                <span>{esProforma ? "Descuento" : "Discount"}</span>
                 <strong>-{moneda(descuentos)}</strong>
               </div>
             )}
-            <div className="factura-totales-row">
-              <span>Shipping</span>
-              <strong>{moneda(0)}</strong>
-            </div>
-            <div className="factura-totales-row">
-              <span>Tax</span>
-              <strong>{moneda(impuestos || 0)}</strong>
-            </div>
-            <div className="factura-totales-row">
-              <span>Deposit</span>
-              <strong>{moneda(0)}</strong>
-            </div>
+            {!esProforma && (
+              <>
+                <div className="factura-totales-row">
+                  <span>Shipping</span>
+                  <strong>{moneda(0)}</strong>
+                </div>
+                <div className="factura-totales-row">
+                  <span>Tax</span>
+                  <strong>{moneda(impuestos || 0)}</strong>
+                </div>
+                <div className="factura-totales-row">
+                  <span>Deposit</span>
+                  <strong>{moneda(0)}</strong>
+                </div>
+              </>
+            )}
             <div className="factura-totales-row factura-total-row">
               <span>Total</span>
               <strong>{moneda(total)}</strong>
             </div>
           </div>
 
-          <div className="factura-payment-block">
-            <p>Payment method</p>
-            <p>Checks may be sent ACH to:</p>
-            <p>NATUR VITALIA LLC</p>
-            <p>Wells Fargo Bank</p>
-            <p>Account #2813330806</p>
-            <p>For direct deposit routing #063107513</p>
-            <p>For wire transfer routing #121000248</p>
-            <p>$35 Applies to all the checks returned for any reason</p>
-          </div>
+          {!esProforma && (
+            <div className="factura-payment-block">
+              <p>Payment method</p>
+              <p>Checks may be sent ACH to:</p>
+              <p>NATUR VITALIA LLC</p>
+              <p>Wells Fargo Bank</p>
+              <p>Account #2813330806</p>
+              <p>For direct deposit routing #063107513</p>
+              <p>For wire transfer routing #121000248</p>
+              <p>
+                {moneda(35)} Applies to all the checks returned for any reason
+              </p>
+            </div>
+          )}
 
-          <div className="factura-note-block">
-            <p>
-              <strong>*NOTE:</strong> All orders must be paid as follows:
-            </p>
-            <p>
-              1) Any payments to Natur Vitalia LLC greater or equal to $5,000
-              will need to be made in the form of a wire or credit card (CC 3%
-              processing fee will be charged for any amount) to facilitate a
-              commencement of the order.
-            </p>
-            <p>
-              2) Any payments via check (regardless of size) may delay
-              commencement of the order and/or delivery by up to 10 days from
-              the date Natur Vitalia LLC receives the check.
-            </p>
-            <p>
-              3) Payments must be done within 30 days after the order has been
-              delivered.
-            </p>
-          </div>
+          {!esProforma && (
+            <div className="factura-note-block">
+              <p>
+                <strong>*NOTE:</strong> All orders must be paid as follows:
+              </p>
+              <p>
+                1) Any payments to Natur Vitalia LLC greater or equal to{" "}
+                {moneda(5000)} will need to be made in the form of a wire or
+                credit card (CC 3% processing fee will be charged for any
+                amount) to facilitate a commencement of the order.
+              </p>
+              <p>
+                2) Any payments via check (regardless of size) may delay
+                commencement of the order and/or delivery by up to 10 days from
+                the date Natur Vitalia LLC receives the check.
+              </p>
+              <p>
+                3) Payments must be done within 30 days after the order has
+                been delivered.
+              </p>
+            </div>
+          )}
         </article>
       </section>
     </div>

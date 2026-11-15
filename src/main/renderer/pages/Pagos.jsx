@@ -5,12 +5,13 @@ import { useClientes } from "../hooks/useClientes";
 import { useOrdenes } from "../hooks/useOrdenes";
 import Factura from "../components/Factura";
 import { facturasService } from "../services/facturas.service";
+import { formatCRC } from "../utils/currency";
+import { formatMetodoPago } from "../utils/formatMetodoPago";
 
 const METODOS_PAGO = [
   { value: "efectivo", label: "Efectivo" },
-  { value: "cheque", label: "Cheque" },
-  { value: "datafono", label: "Datafono" },
-  { value: "zelle", label: "Zelle" },
+  { value: "datafono", label: "Datáfono" },
+  { value: "sinpe_movil", label: "Sinpe Móvil" },
 ];
 
 const formatOrdenNumero = (id) =>
@@ -203,7 +204,7 @@ function Pagos() {
     }
     return {
       tipo: "abono",
-      texto: `Es un abono. Después de este pago quedarán $${restante.toLocaleString("es-CR")} pendientes.`,
+      texto: `Es un abono. Después de este pago quedarán ${formatCRC(restante)} pendientes.`,
     };
   }, [form.monto, saldoOrdenRestante]);
 
@@ -214,7 +215,7 @@ function Pagos() {
       (pago) =>
         String(pago.id).includes(q) ||
         pago.cliente_nombre?.toLowerCase().includes(q) ||
-        pago.metodo_pago?.toLowerCase().includes(q) ||
+        formatMetodoPago(pago.metodo_pago).toLowerCase().includes(q) ||
         String(pago.orden_id).includes(q),
     );
   }, [pagos, busqueda]);
@@ -242,18 +243,15 @@ function Pagos() {
     if (monto > saldoOrdenRestante + 0.005) {
       setMensajeTipo("error");
       setMensaje(
-        `El monto no puede ser mayor al saldo pendiente de la orden ($${Number(
-          saldoOrdenRestante,
-        ).toLocaleString("es-CR")}).`,
+        `El monto no puede ser mayor al saldo pendiente de la orden (${formatCRC(saldoOrdenRestante)}).`,
       );
       return;
     }
 
     const referencia = form.referencia.trim();
     const etiquetaReferencia = {
-      cheque: "Referencia Cheque",
-      datafono: "Referencia Datafono",
-      zelle: "Referencia Zelle",
+      datafono: "Referencia Datáfono",
+      sinpe_movil: "Referencia Sinpe Móvil",
     }[form.metodoPago];
     const notasPayload = [
       form.notas?.trim(),
@@ -286,7 +284,7 @@ function Pagos() {
     setFacturaSeleccionada(null);
     setMensaje(
       saldoRestante > 0.005
-        ? `Abono registrado. Saldo restante: $${saldoRestante.toLocaleString("es-CR")}`
+        ? `Abono registrado. Saldo restante: ${formatCRC(saldoRestante)}`
         : "Pago registrado. La orden quedó pagada.",
     );
     if (resultado.data?.id) {
@@ -340,7 +338,7 @@ function Pagos() {
           <div className="stat-icon">📈</div>
           <div>
             <h3>
-              ${Number(resumen?.total_recaudado ?? 0).toLocaleString("es-CR")}
+              {formatCRC(resumen?.total_recaudado)}
             </h3>
             <p>Total recaudado</p>
           </div>
@@ -348,7 +346,7 @@ function Pagos() {
         <div className="stat-card">
           <div className="stat-icon">🏦</div>
           <div>
-            <h3>${Number(resumen?.efectivo ?? 0).toLocaleString("es-CR")}</h3>
+            <h3>{formatCRC(resumen?.efectivo)}</h3>
             <p>Efectivo</p>
           </div>
         </div>
@@ -411,7 +409,7 @@ function Pagos() {
                           {formatOrdenNumero(orden.id)} — {orden.cliente_nombre}
                         </span>
                         <span className="pill pill-warn">
-                          Faltan ${orden.saldoPendiente.toLocaleString("es-CR")}
+                          Faltan {formatCRC(orden.saldoPendiente)}
                         </span>
                       </button>
                     ))
@@ -462,8 +460,7 @@ function Pagos() {
                             {formatOrdenNumero(orden.id)}
                           </span>
                           <span className="pill pill-warn">
-                            Faltan $
-                            {orden.saldoPendiente.toLocaleString("es-CR")}
+                            Faltan {formatCRC(orden.saldoPendiente)}
                           </span>
                         </button>
                       ))}
@@ -501,22 +498,25 @@ function Pagos() {
                   <div className="detail-row">
                     <span className="detail-label">Total de la orden</span>
                     <span className="detail-value">
-                      ${Number(ordenSeleccionada.total).toLocaleString("es-CR")}
+                      {formatCRC(ordenSeleccionada.total)}
                     </span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Ya pagado</span>
                     <span className="detail-value">
-                      $
-                      {Number(ordenSeleccionada.totalPagado).toLocaleString(
-                        "es-CR",
-                      )}
+                      {formatCRC(ordenSeleccionada.totalPagado)}
                     </span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Saldo pendiente</span>
                     <span className="detail-value">
-                      ${Number(saldoOrdenRestante).toLocaleString("es-CR")}
+                      {formatCRC(saldoOrdenRestante)}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Vendedor</span>
+                    <span className="detail-value">
+                      {ordenSeleccionada.vendedor_nombre || "—"}
                     </span>
                   </div>
                 </div>
@@ -550,8 +550,7 @@ function Pagos() {
 
               <div className="form-group">
                 <label>
-                  Monto a pagar * (máximo $
-                  {Number(saldoOrdenRestante).toLocaleString("es-CR")})
+                  Monto a pagar * (máximo {formatCRC(saldoOrdenRestante)})
                 </label>
                 <input
                   type="text"
@@ -572,8 +571,7 @@ function Pagos() {
                     className="btn-link-inline"
                     onClick={() => cambiarTipoPago("pago_total")}
                   >
-                    Usar el saldo completo ($
-                    {Number(saldoOrdenRestante).toLocaleString("es-CR")})
+                    Usar el saldo completo ({formatCRC(saldoOrdenRestante)})
                   </button>
                 )}
               </div>
@@ -613,7 +611,7 @@ function Pagos() {
                 </select>
               </div>
 
-              {["cheque", "datafono", "zelle"].includes(form.metodoPago) && (
+              {["datafono", "sinpe_movil"].includes(form.metodoPago) && (
                 <div className="form-group">
                   <label>Referencia</label>
                   <input
@@ -623,11 +621,9 @@ function Pagos() {
                       setForm({ ...form, referencia: e.target.value })
                     }
                     placeholder={
-                      form.metodoPago === "cheque"
-                        ? "Número o referencia del cheque"
-                        : form.metodoPago === "zelle"
-                          ? "Número o referencia de Zelle"
-                          : "Número o referencia del datáfono"
+                      form.metodoPago === "sinpe_movil"
+                        ? "Número o referencia de Sinpe Móvil"
+                        : "Número o referencia del datáfono"
                     }
                   />
                 </div>
@@ -644,10 +640,8 @@ function Pagos() {
 
               {clienteSeleccionado?.balance_pendiente != null && (
                 <div className="form-note">
-                  Balance pendiente total del cliente: $
-                  {Number(clienteSeleccionado.balance_pendiente).toLocaleString(
-                    "es-CR",
-                  )}
+                  Balance pendiente total del cliente:{" "}
+                  {formatCRC(clienteSeleccionado.balance_pendiente)}
                 </div>
               )}
             </>
@@ -720,12 +714,12 @@ function Pagos() {
                     >
                       <td>{formatOrdenNumero(orden.id)}</td>
                       <td>{orden.cliente_nombre}</td>
-                      <td>${Number(orden.total).toLocaleString("es-CR")}</td>
+                      <td>{formatCRC(orden.total)}</td>
                       <td>
-                        ${Number(orden.totalPagado).toLocaleString("es-CR")}
+                        {formatCRC(orden.totalPagado)}
                       </td>
                       <td>
-                        ${Number(orden.saldoPendiente).toLocaleString("es-CR")}
+                        {formatCRC(orden.saldoPendiente)}
                       </td>
                     </tr>
                   ))}
@@ -755,6 +749,7 @@ function Pagos() {
                     <th>#</th>
                     <th>Cliente</th>
                     <th>Orden</th>
+                    <th>Vendedor</th>
                     <th>Monto</th>
                     <th>Tipo</th>
                     <th>Método</th>
@@ -770,13 +765,14 @@ function Pagos() {
                       <td>
                         {pago.orden_id ? formatOrdenNumero(pago.orden_id) : "—"}
                       </td>
-                      <td>${Number(pago.monto).toLocaleString("es-CR")}</td>
+                      <td>{pago.vendedor_nombre || "—"}</td>
+                      <td>{formatCRC(pago.monto)}</td>
                       <td>
                         {pago.tipo_pago === "pago_total"
                           ? "Pago total"
                           : "Abono"}
                       </td>
-                      <td>{pago.metodo_pago}</td>
+                      <td>{formatMetodoPago(pago.metodo_pago)}</td>
                       <td>
                         {pago.fecha_pago
                           ? new Date(pago.fecha_pago).toLocaleDateString(

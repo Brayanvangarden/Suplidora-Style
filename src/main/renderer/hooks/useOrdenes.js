@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ordenesService } from "../services/ordenes.service";
 
 export function useOrdenes(filtrosIniciales = {}) {
@@ -6,14 +6,18 @@ export function useOrdenes(filtrosIniciales = {}) {
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const ordenesVersion = useRef(0);
 
   // ── Cargar con filtros ──────────────────────────────
   const fetchOrdenes = useCallback(async (filtros = filtrosIniciales) => {
+    const versionSolicitada = ordenesVersion.current;
     setLoading(true);
     setError(null);
     try {
       const data = await ordenesService.getAll(filtros);
-      setOrdenes(data);
+      if (versionSolicitada === ordenesVersion.current) {
+        setOrdenes(data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -35,19 +39,9 @@ export function useOrdenes(filtrosIniciales = {}) {
   const crearOrden = useCallback(async (data) => {
     try {
       const nueva = await ordenesService.create(data);
+      ordenesVersion.current += 1;
       setOrdenes((prev) => [nueva, ...prev]);
       return { ok: true, data: nueva };
-    } catch (err) {
-      return { ok: false, message: err.message };
-    }
-  }, []);
-
-  // ── Cambiar estado ──────────────────────────────────
-  const cambiarEstado = useCallback(async (id, estado) => {
-    try {
-      const actualizada = await ordenesService.updateEstado(id, estado);
-      setOrdenes((prev) => prev.map((o) => (o.id === id ? actualizada : o)));
-      return { ok: true, data: actualizada };
     } catch (err) {
       return { ok: false, message: err.message };
     }
@@ -57,6 +51,7 @@ export function useOrdenes(filtrosIniciales = {}) {
   const actualizarOrden = useCallback(async (id, data) => {
     try {
       const actualizada = await ordenesService.update(id, data);
+      ordenesVersion.current += 1;
       setOrdenes((prev) => prev.map((o) => (o.id === id ? actualizada : o)));
       return { ok: true, data: actualizada };
     } catch (err) {
@@ -82,13 +77,13 @@ export function useOrdenes(filtrosIniciales = {}) {
   // ── Filtros locales ─────────────────────────────────
   const ordenesPendientes = ordenes.filter((o) => o.estado === "pendiente");
   const ordenesPorCobrar = ordenes.filter((o) => o.estado_pago === "pendiente");
-  const ordenesEnProceso = ordenes.filter((o) => o.estado === "en_proceso");
+  const ordenesProcesadas = ordenes.filter((o) => o.estado === "procesada");
 
   return {
     ordenes,
     ordenesPendientes,
     ordenesPorCobrar,
-    ordenesEnProceso,
+    ordenesProcesadas,
     resumen,
     loading,
     error,
@@ -96,7 +91,6 @@ export function useOrdenes(filtrosIniciales = {}) {
     fetchResumen,
     crearOrden,
     actualizarOrden,
-    cambiarEstado,
     cambiarEstadoPago,
   };
 }

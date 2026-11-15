@@ -3,6 +3,8 @@ const http = require("http");
 const path = require("path");
 const isDev = !app.isPackaged;
 
+app.setName("BeYou");
+
 const { initDatabase } = require("./database/initDatabase");
 
 // ── Importar todos los handlers IPC ───────────────
@@ -16,6 +18,7 @@ const { registerPagosIpc } = require("./ipc/pagos.ipc");
 const { registerFacturasIpc } = require("./ipc/facturas.ipc");
 const { registerCuentasPorCobrarIpc } = require("./ipc/cuentas_por_cobrar.ipc");
 const { registerUsuariosIpc } = require("./ipc/usuarios.ipc");
+const { registerVendedoresIpc } = require("./ipc/vendedores.ipc");
 
 function getDevUrl() {
   const ports = [4173, 4174, 4175, 5173, 5174];
@@ -51,7 +54,7 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
-    icon: path.join(__dirname, "../../assets/logi.ico"),
+    icon: path.join(__dirname, "../../assets/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -85,6 +88,7 @@ app
     registerFacturasIpc();
     registerCuentasPorCobrarIpc();
     registerUsuariosIpc();
+    registerVendedoresIpc();
 
     // 3️⃣ Crear ventana
     createWindow();

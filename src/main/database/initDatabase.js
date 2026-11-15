@@ -244,7 +244,7 @@ function runMigrations(db) {
   const files = fs
     .readdirSync(migrationsDir)
     .filter((f) => f.endsWith(".js"))
-    .sort();
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   for (const file of files) {
     const version = file.replace(".js", "");

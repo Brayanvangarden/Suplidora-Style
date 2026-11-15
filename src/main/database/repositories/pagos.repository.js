@@ -7,10 +7,13 @@ function getAll(filtros = {}) {
       p.*,
       c.nombre  AS cliente_nombre,
       c.empresa AS cliente_empresa,
-      u.nombre  AS usuario_nombre
+      u.nombre  AS usuario_nombre,
+      v.nombre  AS vendedor_nombre
     FROM pagos p
     LEFT JOIN clientes c ON p.cliente_id = c.id
     LEFT JOIN usuarios u ON p.usuario_id = u.id
+    LEFT JOIN ordenes o ON p.orden_id = o.id
+    LEFT JOIN usuarios v ON o.vendedor_id = v.id
     WHERE 1=1
   `;
   const params = [];
@@ -42,9 +45,11 @@ function getById(id) {
   return getDb()
     .prepare(
       `
-      SELECT p.*, c.nombre AS cliente_nombre
+      SELECT p.*, c.nombre AS cliente_nombre, v.nombre AS vendedor_nombre
       FROM pagos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
+      LEFT JOIN ordenes o ON p.orden_id = o.id
+      LEFT JOIN usuarios v ON o.vendedor_id = v.id
       WHERE p.id = ?
     `,
     )
@@ -152,7 +157,11 @@ function getResumen() {
         SUM(CASE WHEN metodo_pago = 'efectivo' THEN monto ELSE 0 END) AS efectivo,
         SUM(CASE WHEN metodo_pago = 'cheque'   THEN monto ELSE 0 END) AS cheque,
         SUM(CASE WHEN metodo_pago = 'datafono' THEN monto ELSE 0 END) AS datafono,
-        SUM(CASE WHEN metodo_pago = 'zelle'    THEN monto ELSE 0 END) AS zelle
+        SUM(
+          CASE WHEN metodo_pago IN ('sinpe_movil', 'sinpe', 'zelle')
+            THEN monto ELSE 0
+          END
+        ) AS sinpe_movil
       FROM pagos
     `,
     )

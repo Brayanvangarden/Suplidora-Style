@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Recuperar sesión guardada al iniciar
-    const savedUser = localStorage.getItem('capsulas_user')
+    const savedUser = localStorage.getItem('beyou_user')
     if (savedUser) {
       setUser(JSON.parse(savedUser))
     }
@@ -17,12 +17,12 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => {
     setUser(userData)
-    localStorage.setItem('capsulas_user', JSON.stringify(userData))
+    localStorage.setItem('beyou_user', JSON.stringify(userData))
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('capsulas_user')
+    localStorage.removeItem('beyou_user')
   }
 
   return (

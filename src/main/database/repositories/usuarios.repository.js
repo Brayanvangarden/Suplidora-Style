@@ -5,11 +5,19 @@ function hashPassword(password) {
   return bcrypt.hashSync(password, 10);
 }
 
+function validarComisionPorcentaje(value) {
+  const porcentaje = Number(value ?? 0);
+  if (!Number.isFinite(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+    throw new Error("La comisión debe estar entre 0 y 100.");
+  }
+  return porcentaje;
+}
+
 function getAll() {
   return getDb()
     .prepare(
       `
-      SELECT id, nombre, usuario, rol, estado, creado_en
+      SELECT id, nombre, usuario, rol, comision_porcentaje, estado, creado_en
       FROM usuarios
       ORDER BY nombre ASC
     `,
@@ -21,7 +29,7 @@ function getById(id) {
   return getDb()
     .prepare(
       `
-      SELECT id, nombre, usuario, rol, estado, creado_en
+      SELECT id, nombre, usuario, rol, comision_porcentaje, estado, creado_en
       FROM usuarios WHERE id = ?
     `,
     )
@@ -29,11 +37,18 @@ function getById(id) {
 }
 
 function create(data) {
+  const comision_porcentaje = validarComisionPorcentaje(
+    data.comision_porcentaje,
+  );
   const result = getDb()
     .prepare(
       `
-      INSERT INTO usuarios (nombre, usuario, password, rol, estado)
-      VALUES (@nombre, @usuario, @password, @rol, @estado)
+      INSERT INTO usuarios (
+        nombre, usuario, password, rol, comision_porcentaje, estado
+      )
+      VALUES (
+        @nombre, @usuario, @password, @rol, @comision_porcentaje, @estado
+      )
     `,
     )
     .run({
@@ -41,12 +56,16 @@ function create(data) {
       usuario: data.usuario,
       password: hashPassword(data.password),
       rol: data.rol ?? "vendedor",
+      comision_porcentaje,
       estado: data.estado ?? "activo",
     });
   return getById(result.lastInsertRowid);
 }
 
 function update(id, data) {
+  const comision_porcentaje = validarComisionPorcentaje(
+    data.comision_porcentaje,
+  );
   getDb()
     .prepare(
       `
@@ -54,12 +73,13 @@ function update(id, data) {
         nombre      = @nombre,
         usuario     = @usuario,
         rol         = @rol,
+        comision_porcentaje = @comision_porcentaje,
         estado      = @estado,
         actualizado = datetime('now')
       WHERE id = @id
     `,
     )
-    .run({ ...data, id });
+    .run({ ...data, comision_porcentaje, id });
   return getById(id);
 }
 

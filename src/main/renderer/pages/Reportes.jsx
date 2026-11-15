@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useClientes } from '../hooks/useClientes'
 import { useOrdenes } from '../hooks/useOrdenes'
 import { usePagos } from '../hooks/usePagos'
+import { formatCRC } from '../utils/currency'
+import { formatMetodoPago } from '../utils/formatMetodoPago'
 
 function Reportes() {
   const { clientes, loading: loadingClientes } = useClientes()
@@ -54,14 +56,14 @@ function Reportes() {
         <div className="stat-card">
           <div className="stat-icon">💵</div>
           <div>
-            <h3>${Number(resumenOrdenes?.monto_total ?? 0).toLocaleString('es-CR')}</h3>
+            <h3>{formatCRC(resumenOrdenes?.monto_total)}</h3>
             <p>Total facturado</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">⏳</div>
           <div>
-            <h3>${Number(resumenOrdenes?.pendiente_cobro ?? 0).toLocaleString('es-CR')}</h3>
+            <h3>{formatCRC(resumenOrdenes?.pendiente_cobro)}</h3>
             <p>Pendiente por cobrar</p>
           </div>
         </div>
@@ -94,7 +96,7 @@ function Reportes() {
                     <tr key={cliente.id}>
                       <td>{cliente.nombre}</td>
                       <td>{cliente.empresa || '—'}</td>
-                      <td>${Number(cliente.balance_pendiente || 0).toLocaleString('es-CR')}</td>
+                      <td>{formatCRC(cliente.balance_pendiente)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -121,7 +123,7 @@ function Reportes() {
                   {topClientes.map((cliente) => (
                     <tr key={cliente.id}>
                       <td>{cliente.nombre}</td>
-                      <td>${Number(cliente.balance_pendiente || 0).toLocaleString('es-CR')}</td>
+                      <td>{formatCRC(cliente.balance_pendiente)}</td>
                       <td>{cliente.estado}</td>
                     </tr>
                   ))}
@@ -153,7 +155,7 @@ function Reportes() {
                     <tr key={orden.id}>
                       <td>{orden.id}</td>
                       <td>{orden.cliente_nombre}</td>
-                      <td>${Number(orden.total || 0).toLocaleString('es-CR')}</td>
+                      <td>{formatCRC(orden.total)}</td>
                       <td>{orden.estado}</td>
                     </tr>
                   ))}
@@ -183,8 +185,8 @@ function Reportes() {
                     <tr key={pago.id}>
                       <td>{pago.id}</td>
                       <td>{pago.cliente_nombre}</td>
-                      <td>${Number(pago.monto || 0).toLocaleString('es-CR')}</td>
-                      <td>{pago.metodo_pago}</td>
+                      <td>{formatCRC(pago.monto)}</td>
+                      <td>{formatMetodoPago(pago.metodo_pago)}</td>
                     </tr>
                   ))}
                 </tbody>

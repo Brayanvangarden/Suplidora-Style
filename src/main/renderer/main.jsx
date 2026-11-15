@@ -4,15 +4,16 @@ import App from "./App";
 import "./styles/globals.css";
 import "./styles/variables.css";
 import "./styles/theme.css";
+import "./styles/theme-berry-champagne.css";
 
-const savedConfig = window.localStorage.getItem("capsulas-config");
+const savedConfig = window.localStorage.getItem("beyou-config");
 
 if (savedConfig) {
   try {
     const config = JSON.parse(savedConfig);
     document.body.classList.toggle("theme-dark", config.tema === "dark");
   } catch {
-    window.localStorage.removeItem("capsulas-config");
+    window.localStorage.removeItem("beyou-config");
   }
 }
 

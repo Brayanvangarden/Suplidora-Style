@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PolishHero from "../components/PolishHero";
 import { useAuth } from "../hooks/useAuth";
 
 function Login() {
@@ -118,17 +119,9 @@ function Login() {
       {/* Left panel — decorative */}
       <div className="login-panel" style={styles.panel}>
         <div style={styles.panelInner}>
-          <div className="capsule-hero-wrap">
-            <div className="capsule-hero" title="Pásame el mouse por encima ✨">
-              <div className="capsule-top" />
-              <div className="capsule-bottom" />
-              <div className="capsule-seam" />
-              <div className="capsule-particle p1" />
-              <div className="capsule-particle p2" />
-              <div className="capsule-particle p3" />
-              <div className="capsule-particle p4" />
-            </div>
-            <span style={styles.logoText}>Logicaps</span>
+          <div className="beauty-hero-wrap">
+            <PolishHero />
+            <span style={styles.logoText}>BeYou</span>
           </div>
 
           <div style={styles.panelContent}>
@@ -154,7 +147,7 @@ function Login() {
           {/* Mobile logo */}
           <div style={styles.mobileLogo}>
             <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-              <rect width="36" height="36" rx="10" fill="#0f766e" />
+              <rect width="36" height="36" rx="10" fill="#be3560" />
               <path
                 d="M10 18 L18 10 L26 18 L18 26 Z"
                 stroke="white"
@@ -164,7 +157,7 @@ function Login() {
               />
               <circle cx="18" cy="18" r="3" fill="white" />
             </svg>
-            <span style={styles.mobileLogoText}>Logicaps</span>
+            <span style={styles.mobileLogoText}>BeYou</span>
           </div>
 
           <header style={styles.header}>
@@ -542,119 +535,6 @@ function Login() {
           .login-panel { display: none !important; }
           .login-form-side { width: 100% !important; }
         }
-
-        /* ── Cápsula animada ─────────────────────────── */
-        .capsule-hero-wrap {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 22px;
-        }
-
-        @keyframes capsuleFloat {
-          0%, 100% { transform: rotate(-14deg) translateY(0); }
-          50%      { transform: rotate(-14deg) translateY(-10px); }
-        }
-
-        .capsule-hero {
-          position: relative;
-          width: 108px;
-          height: 270px;
-          transform: rotate(-14deg);
-          filter: drop-shadow(0 22px 28px rgba(3, 20, 18, 0.45));
-          animation: capsuleFloat 4.5s ease-in-out infinite;
-          cursor: pointer;
-        }
-
-        .capsule-hero:hover {
-          animation-play-state: paused;
-        }
-
-        .capsule-top,
-        .capsule-bottom {
-          position: absolute;
-          left: 0;
-          width: 100%;
-          height: 50%;
-          transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .capsule-top {
-          top: 0;
-          border-radius: 54px 54px 6px 6px;
-          background: linear-gradient(160deg, #5eead4 0%, #0f766e 75%);
-          box-shadow:
-            inset -10px -10px 18px rgba(0, 0, 0, 0.18),
-            inset 8px 8px 14px rgba(255, 255, 255, 0.28);
-        }
-
-        .capsule-bottom {
-          bottom: 0;
-          border-radius: 6px 6px 54px 54px;
-          background: linear-gradient(160deg, #fda4af 0%, #fb7185 75%);
-          box-shadow:
-            inset -10px -10px 18px rgba(0, 0, 0, 0.18),
-            inset 8px 8px 14px rgba(255, 255, 255, 0.28);
-        }
-
-        .capsule-seam {
-          position: absolute;
-          top: 50%;
-          left: -6%;
-          width: 112%;
-          height: 4px;
-          background: rgba(0, 0, 0, 0.22);
-          transform: translateY(-50%);
-          border-radius: 999px;
-          transition: opacity 0.3s ease;
-        }
-
-        .capsule-particle {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 13px;
-          height: 13px;
-          border-radius: 50%;
-          opacity: 0;
-          transform: translate(-50%, -50%) scale(0.3);
-          transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .capsule-particle.p1 { background: #fde68a; }
-        .capsule-particle.p2 { background: #fca5a5; }
-        .capsule-particle.p3 { background: #99f6e4; }
-        .capsule-particle.p4 { background: #c4b5fd; }
-
-        .capsule-hero:hover .capsule-top {
-          transform: translateY(-36px) rotate(-3deg);
-        }
-        .capsule-hero:hover .capsule-bottom {
-          transform: translateY(36px) rotate(3deg);
-        }
-        .capsule-hero:hover .capsule-seam {
-          opacity: 0;
-        }
-        .capsule-hero:hover .capsule-particle {
-          opacity: 1;
-        }
-        .capsule-hero:hover .capsule-particle.p1 {
-          transform: translate(-160%, -20%) scale(1);
-          transition-delay: 0.04s;
-        }
-        .capsule-hero:hover .capsule-particle.p2 {
-          transform: translate(60%, 10%) scale(1);
-          transition-delay: 0.1s;
-        }
-        .capsule-hero:hover .capsule-particle.p3 {
-          transform: translate(-40%, 90%) scale(1);
-          transition-delay: 0.16s;
-        }
-        .capsule-hero:hover .capsule-particle.p4 {
-          transform: translate(80%, 70%) scale(1);
-          transition-delay: 0.22s;
-        }
       `}</style>
     </div>
   );
@@ -664,7 +544,7 @@ const styles = {
   root: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "#f4faf9",
+    backgroundColor: "#fdf6f8",
     fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
   },
 
@@ -672,7 +552,7 @@ const styles = {
   panel: {
     width: "45%",
     background:
-      "linear-gradient(135deg, #0f766e 0%, #0e7490 55%, #075985 100%)",
+      "linear-gradient(135deg, #2d0a22 0%, #4a1239 48%, #be3560 100%)",
     display: "flex",
     alignItems: "stretch",
     position: "relative",
@@ -719,7 +599,7 @@ const styles = {
     width: "8px",
     height: "8px",
     borderRadius: "50%",
-    background: "#fb7185",
+    background: "#fda4af",
     opacity: 0.35,
   },
   circle1: {
@@ -736,7 +616,7 @@ const styles = {
     width: "200px",
     height: "200px",
     borderRadius: "50%",
-    border: "1px solid rgba(251,113,133,0.18)",
+    border: "1px solid rgba(253,164,175,0.24)",
     bottom: "60px",
     right: "-40px",
   },
@@ -762,7 +642,7 @@ const styles = {
   mobileLogoText: {
     fontSize: "17px",
     fontWeight: "600",
-    color: "#0f766e",
+    color: "#be3560",
   },
   header: {
     marginBottom: "32px",
@@ -770,7 +650,7 @@ const styles = {
   title: {
     fontSize: "26px",
     fontWeight: "700",
-    color: "#0c2a27",
+    color: "#2a1020",
     margin: "0 0 8px 0",
     letterSpacing: "-0.5px",
   },
@@ -816,7 +696,7 @@ const styles = {
     width: "100%",
     padding: "11px 40px 11px 38px",
     fontSize: "14px",
-    color: "#0c2a27",
+    color: "#2a1020",
     background: "white",
     border: "1.5px solid #e5e7eb",
     borderRadius: "10px",
@@ -828,13 +708,13 @@ const styles = {
     width: "100%",
     padding: "11px 40px 11px 38px",
     fontSize: "14px",
-    color: "#0c2a27",
+    color: "#2a1020",
     background: "white",
-    border: "1.5px solid #0f766e",
+    border: "1.5px solid #be3560",
     borderRadius: "10px",
     outline: "none",
     boxSizing: "border-box",
-    boxShadow: "0 0 0 3px rgba(15,118,110,0.12)",
+    boxShadow: "0 0 0 3px rgba(190,53,96,0.14)",
     transition: "border-color 0.15s ease, box-shadow 0.15s ease",
   },
   eyeBtn: {
@@ -872,7 +752,7 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     color: "white",
-    background: "linear-gradient(135deg, #0f766e 0%, #0e7490 100%)",
+    background: "linear-gradient(135deg, #be3560 0%, #f43f5e 100%)",
     border: "none",
     borderRadius: "10px",
     cursor: "pointer",
@@ -896,24 +776,24 @@ const styles = {
     color: "#6b7280",
   },
   link: {
-    color: "#0f766e",
+    color: "#be3560",
     fontWeight: "500",
     textDecoration: "none",
   },
   linkButton: {
     background: "none",
     border: "none",
-    color: "#0f766e",
+    color: "#be3560",
     fontWeight: "600",
     cursor: "pointer",
     padding: 0,
   },
   feedbackBox: {
     padding: "12px 14px",
-    background: "#ecfdf5",
-    border: "1px solid #a7f3d0",
+    background: "#fff0f3",
+    border: "1px solid #f1dfe5",
     borderRadius: "8px",
-    color: "#0c2a27",
+    color: "#2a1020",
     fontSize: "13px",
   },
   debugInfo: {

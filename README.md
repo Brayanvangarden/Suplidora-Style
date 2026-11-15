@@ -1,10 +1,10 @@
-# Capsulas Inventario
+# BeYou
 
-Aplicación de escritorio desarrollada con Electron, React y SQLite para gestionar el inventario de cápsulas, así como el control de clientes, ventas, pedidos y pagos.
+Aplicación de escritorio desarrollada con Electron, React y SQLite para gestionar inventario, clientes, ventas, pedidos y pagos. El catálogo actual de cápsulas se conserva como conjunto de datos de prueba para BeYou.
 
 ## Descripción general
 
-Capsulas Inventario es una solución pensada para negocios que necesitan llevar un control detallado de:
+BeYou es una base para negocios que necesitan llevar un control detallado de:
 
 - Inventario de cápsulas vacías y productos relacionados
 - Categorías y stock mínimo
@@ -47,7 +47,7 @@ Para ejecutar el proyecto correctamente, necesitas:
 - Python 3.11+ (recomendado para compilar dependencias nativas)
 - Visual Studio 2022 o Visual Studio Build Tools 2022 con el componente de C++ para Windows
 
-> Importante: en Windows, la compilación de algunas dependencias nativas puede fallar si la ruta del proyecto contiene espacios. Se recomienda usar una ruta como `C:\Projects\Capsulas`.
+> Importante: en Windows, la compilación de algunas dependencias nativas puede fallar si la ruta del proyecto contiene espacios. Se recomienda usar una ruta como `C:\Projects\BeYou`.
 
 ## Instalación
 
@@ -55,7 +55,7 @@ Para ejecutar el proyecto correctamente, necesitas:
 
 ```bash
 git clone <url-del-repositorio>
-cd Capsulas
+cd BeYou
 ```
 
 2. Instala las dependencias del proyecto:
@@ -110,6 +110,7 @@ Los archivos compilados se generarán en la carpeta `release`.
 ## Datos de prueba
 
 El proyecto incluye semillas de base de datos con usuarios, clientes, productos, órdenes y pagos para probar la aplicación rápidamente.
+BeYou crea una base de datos independiente (`beyou.db`) y carga datos de prueba; no importa cuentas ni registros anteriores.
 
 Usuario por defecto de ejemplo:
 
@@ -129,4 +130,3 @@ Si encuentras problemas con `better-sqlite3` en Windows, asegúrate de tener ins
 ## Licencia
 
 Este proyecto está bajo la licencia ISC.
-

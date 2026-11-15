@@ -10,9 +10,9 @@ function getDbPath() {
   // En desarrollo usa la raíz del proyecto
   const isDev = !app.isPackaged
   if (isDev) {
-    return path.join(process.cwd(), 'capsulas.db')
+    return path.join(process.cwd(), 'beyou.db')
   }
-  return path.join(app.getPath('userData'), 'capsulas.db')
+  return path.join(app.getPath('userData'), 'beyou.db')
 }
 
 function getDb() {

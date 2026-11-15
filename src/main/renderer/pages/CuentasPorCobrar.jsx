@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { cuentasPorCobrarService } from "../services/cuentasPorCobrar.service";
+import { formatCRC } from "../utils/currency";
+import { formatMetodoPago } from "../utils/formatMetodoPago";
 
 const ESTADOS = {
   al_dia: "Al día",
@@ -7,7 +9,7 @@ const ESTADOS = {
   morosa: "Morosa",
 };
 
-const moneda = (valor) => `$${Number(valor ?? 0).toLocaleString("es-CR")}`;
+const moneda = formatCRC;
 const fecha = (valor) =>
   valor ? new Date(valor).toLocaleDateString("es-CR") : "—";
 const mesActual = () => new Date().toISOString().slice(0, 7);
@@ -102,12 +104,6 @@ function CuentasPorCobrar() {
   const descargarEstadoCuenta = () => {
     if (!estadoCuenta || !clienteSeleccionado) return;
 
-    const formatoUsd = (valor) =>
-      `$${Number(valor ?? 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-
     const fechaLarga = (valor) =>
       valor
         ? new Date(valor).toLocaleDateString("en-US", {
@@ -141,9 +137,9 @@ function CuentasPorCobrar() {
           <td>${escaparHtml(fechaLarga(movimiento.fecha))}</td>
           <td>${escaparHtml(documentoDe(movimiento))}</td>
           <td>${esOrden ? "Orden" : "Pago"}</td>
-          <td class="charge">${esOrden ? formatoUsd(movimiento.monto) : "0"}</td>
-          <td class="payment">${!esOrden ? formatoUsd(Math.abs(movimiento.monto)) : "0"}</td>
-          <td>${formatoUsd(movimiento.saldo)}</td>
+          <td class="charge">${formatCRC(esOrden ? movimiento.monto : 0)}</td>
+          <td class="payment">${formatCRC(!esOrden ? Math.abs(movimiento.monto) : 0)}</td>
+          <td>${formatCRC(movimiento.saldo)}</td>
         </tr>`;
       })
       .join("");
@@ -188,7 +184,7 @@ function CuentasPorCobrar() {
     </style></head><body>
       <table class="header-row"><tr>
         <td style="width:60%">
-          <div class="logo">LOGICAPS</div>
+          <div class="logo">BeYou</div>
           <div class="company-info">
             NATUR VITALIA LLC<br/>
             7980 W 25th Ct. Hialeah, FL 33016<br/>
@@ -449,7 +445,13 @@ function CuentasPorCobrar() {
                         <tr key={movimiento.clave}>
                           <td>{fecha(movimiento.fecha)}</td>
                           <td>{movimiento.numero_factura || "Sin factura"}</td>
-                          <td>{movimiento.descripcion}</td>
+                          <td>
+                            {movimiento.tipo === "pago"
+                              ? `Pago - ${formatMetodoPago(
+                                  movimiento.metodo_pago,
+                                )}`
+                              : movimiento.descripcion}
+                          </td>
                           <td
                             className={
                               movimiento.tipo === "pago"

@@ -1,7 +1,8 @@
 import { jsPDF } from "jspdf";
+import { formatDate } from "../utils/formatDate";
 
 export const COMPANY_LOGO_URL = new URL(
-  "../../../../assets/logo factura.jpeg",
+  "../../../../assets/beyou-logo.svg",
   import.meta.url,
 ).href;
 
@@ -33,10 +34,6 @@ function getCompanyLogo() {
     });
   }
   return companyLogoPromise;
-}
-
-function moneda(value) {
-  return `$${Number(value ?? 0).toLocaleString("en-US")}`;
 }
 
 function formatOrdenNumero(id) {
@@ -99,10 +96,9 @@ function dibujarCajasBillToShipTo(
   return y + boxHeight + 10;
 }
 
-function monedaUsd(value) {
-  return `$${Number(value ?? 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+function monedaCRC(value) {
+  return `CRC ${Number(value ?? 0).toLocaleString("es-CR", {
+    maximumFractionDigits: 0,
   })}`;
 }
 
@@ -135,14 +131,14 @@ function dibujarPieYPago(
   const rowHeight = 20;
   const lineTop = startY - 16;
 
-  const rows = [{ label: "Subtotal", value: monedaUsd(subtotal) }];
+  const rows = [{ label: "Subtotal", value: monedaCRC(subtotal) }];
   if (descuento > 0) {
-    rows.push({ label: "Discount", value: `-${monedaUsd(descuento)}` });
+    rows.push({ label: "Discount", value: `-${monedaCRC(descuento)}` });
   }
   rows.push(
-    { label: "Shipping", value: monedaUsd(0) },
+    { label: "Shipping", value: monedaCRC(0) },
     { label: "Tax", value: impuestosLabel },
-    { label: "Deposit", value: monedaUsd(0) },
+    { label: "Deposit", value: monedaCRC(0) },
   );
 
   // Línea horizontal completa arriba de todo el bloque
@@ -167,7 +163,7 @@ function dibujarPieYPago(
 
   pdf.setFont("helvetica", "bold");
   pdf.text("Total", totalsLabelX, totalY);
-  pdf.text(monedaUsd(total), totalsValueX, totalY, { align: "right" });
+  pdf.text(monedaCRC(total), totalsValueX, totalY, { align: "right" });
 
   // Línea vertical separando etiqueta / monto
   pdf.setLineWidth(0.6);
@@ -192,7 +188,7 @@ function dibujarPieYPago(
   pdf.text("For direct deposit routing #063107513", margin, startY + 84);
   pdf.text("For wire transfer routing #121000248", margin, startY + 100);
   pdf.text(
-    "$35 Applies to all the checks returned for any reason",
+    `${monedaCRC(35)} Applies to all the checks returned for any reason`,
     margin,
     startY + 116,
   );
@@ -204,7 +200,7 @@ function dibujarPieYPago(
 function dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY }) {
   const noteParagraphs = [
     [
-      "1) Any payments to Natur Vitalia LLC greater or equal to $5,000 will need to be made in",
+      `1) Any payments to Natur Vitalia LLC greater or equal to ${monedaCRC(5000)} will need to be made in`,
       "the form of a wire or credit card (CC 3% processing fee will be charged for any amount)",
       "to facilitate a commencement of the order.",
     ],
@@ -247,7 +243,18 @@ function dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY }) {
 
 async function dibujarEncabezado(
   pdf,
-  { pageWidth, margin, titulo, numero, layout = "horizontal" },
+  {
+    pageWidth,
+    margin,
+    titulo,
+    numero,
+    layout = "horizontal",
+    companyInfo = [
+      "NATUR VITALIA LLC",
+      "7980 W 25th Ct. Hialeah, FL 33016",
+      "Tel. (754) 209-3195 / (954) 889-4019",
+    ],
+  },
 ) {
   const logo = await getCompanyLogo();
   const stacked = layout === "stacked";
@@ -275,11 +282,6 @@ async function dibujarEncabezado(
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
-  const companyInfo = [
-    "NATUR VITALIA LLC",
-    "7980 W 25th Ct. Hialeah, FL 33016",
-    "Tel. (754) 209-3195 / (954) 889-4019",
-  ];
   if (stacked) {
     const companyX = margin;
     companyInfo.forEach((line, index) => {
@@ -297,6 +299,81 @@ async function dibujarEncabezado(
   pdf.text(titulo, pageWidth - 150, 52);
   pdf.setFontSize(11);
   pdf.text(numero, pageWidth - 150, 72);
+}
+
+function dibujarDatosOrden(pdf, { orden, margin, pageWidth, startY }) {
+  const labelX = margin;
+  const valueX = margin + 52;
+  const contentWidth = pageWidth - valueX - margin;
+
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Cliente:", labelX, startY);
+  pdf.setFont("helvetica", "normal");
+  const clienteLines = pdf.splitTextToSize(
+    orden?.cliente_nombre || "Sin cliente",
+    contentWidth,
+  );
+  pdf.text(clienteLines, valueX, startY);
+
+  let y = startY + Math.max(18, clienteLines.length * 12);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Fecha de emisión:", labelX, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(formatDate(orden?.fecha_creacion), valueX + 52, y);
+  if (orden?.fecha_entrega) {
+    const entregaX = pageWidth / 2 + 20;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Fecha de entrega:", entregaX, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(formatDate(orden.fecha_entrega), entregaX + 92, y);
+  }
+  y += 18;
+
+  if (orden?.notas) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Notas:", labelX, y);
+    pdf.setFont("helvetica", "normal");
+    const notas = pdf.splitTextToSize(String(orden.notas), contentWidth);
+    pdf.text(notas, valueX, y);
+    y += notas.length * 12;
+  }
+
+  return y + 10;
+}
+
+function dibujarTotalesProforma(
+  pdf,
+  { margin, pageWidth, startY, subtotal, descuento, total },
+) {
+  const labelX = pageWidth - 190;
+  const valueX = pageWidth - margin;
+  const rows = [{ label: "Subtotal", value: monedaCRC(subtotal) }];
+  if (descuento > 0) {
+    rows.push({ label: "Descuento", value: `-${monedaCRC(descuento)}` });
+  }
+
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.8);
+  pdf.line(labelX - 10, startY - 12, valueX, startY - 12);
+  pdf.setFontSize(10);
+  rows.forEach((row, index) => {
+    const y = startY + index * 20;
+    pdf.setFont("helvetica", "bold");
+    pdf.text(row.label, labelX, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(row.value, valueX, y, { align: "right" });
+  });
+
+  const totalY = startY + rows.length * 20;
+  pdf.setLineWidth(0.8);
+  pdf.line(labelX - 10, totalY - 13, valueX, totalY - 13);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Total", labelX, totalY);
+  pdf.text(monedaCRC(total), valueX, totalY, { align: "right" });
+  pdf.setLineWidth(1);
+  pdf.line(labelX - 10, totalY + 8, valueX, totalY + 8);
+  pdf.line(labelX - 10, totalY + 11, valueX, totalY + 11);
 }
 
 async function crearPdf(factura) {
@@ -366,8 +443,8 @@ async function crearPdf(factura) {
       pdf.text(String(line), 120, y + lineIndex * 10);
     });
     pdf.text(String(quantity), 356, y);
-    pdf.text(monedaUsd(unitPrice), 420, y);
-    pdf.text(monedaUsd(lineTotal), 500, y);
+    pdf.text(monedaCRC(unitPrice), 420, y);
+    pdf.text(monedaCRC(lineTotal), 500, y);
     y += 18;
   });
 
@@ -391,33 +468,27 @@ async function crearProformaPdf(orden) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 42;
-  const boxWidth = pageWidth / 2 - 70;
   await dibujarEncabezado(pdf, {
     pageWidth,
     margin,
-    titulo: "QUOTATION",
-    numero: `No. ${String(orden?.id ?? 0).padStart(4, "0")}`,
+    titulo: "PROFORMA",
+    numero: `Orden N.º ${String(orden?.id ?? 0).padStart(4, "0")}`,
     layout: "stacked",
+    companyInfo: ["Suplidora y academia de belleza Style"],
   });
 
-  const billX = margin;
-  const shipX = pageWidth / 2 + 12;
-  let y = 230;
-
-  y = dibujarCajasBillToShipTo(pdf, {
-    billX,
-    shipX,
-    y,
-    boxWidth,
-    billToLines: obtenerLineasBillTo(orden),
-    shipToLines: obtenerLineasShipTo(orden),
+  let y = dibujarDatosOrden(pdf, {
+    orden,
+    margin,
+    pageWidth,
+    startY: 226,
   });
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
-  pdf.text("Item No.", margin, y);
-  pdf.text("Description", 120, y);
-  pdf.text("Quantity", 350, y);
-  pdf.text("Unit Price", 420, y);
+  pdf.text("Código", margin, y);
+  pdf.text("Descripción", 120, y);
+  pdf.text("Cantidad", 350, y);
+  pdf.text("Precio unitario", 420, y);
   pdf.text("Total", 500, y);
   pdf.setDrawColor(180, 180, 180);
   pdf.line(margin, y + 4, pageWidth - margin, y + 4);
@@ -438,7 +509,7 @@ async function crearProformaPdf(orden) {
       y = 40;
     }
 
-    const description = item.producto_nombre || item.descripcion || "Product";
+    const description = item.producto_nombre || item.descripcion || "Producto";
     const itemNo = String(
       item.producto_sku || item.sku || item.codigo_producto || "-",
     );
@@ -452,13 +523,13 @@ async function crearProformaPdf(orden) {
       pdf.text(String(line), 120, y + lineIndex * 10);
     });
     pdf.text(String(quantity), 356, y);
-    pdf.text(monedaUsd(unitPrice), 420, y);
-    pdf.text(monedaUsd(lineTotal), 500, y);
+    pdf.text(monedaCRC(unitPrice), 420, y);
+    pdf.text(monedaCRC(lineTotal), 500, y);
     y += 18;
   });
 
   const startY = Math.min(y + 48, pageHeight - 200);
-  const bottomY = dibujarPieYPago(pdf, {
+  dibujarTotalesProforma(pdf, {
     margin,
     pageWidth,
     startY,
@@ -466,8 +537,6 @@ async function crearProformaPdf(orden) {
     descuento,
     total,
   });
-
-  dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY: bottomY + 34 });
 
   return pdf;
 }

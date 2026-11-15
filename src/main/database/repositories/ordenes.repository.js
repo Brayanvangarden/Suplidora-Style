@@ -29,6 +29,36 @@ function obtenerDatosShipTo(db, clienteId) {
   };
 }
 
+function validarDescuento(descuentoPorcentaje, descuentoOrdenPorcentaje) {
+  const descuento = Number(descuentoPorcentaje);
+  const descuentoOrden = Number(descuentoOrdenPorcentaje);
+  if (
+    !Number.isFinite(descuento) ||
+    descuento < 0 ||
+    descuento > 100 ||
+    !Number.isFinite(descuentoOrden) ||
+    descuentoOrden < 0 ||
+    descuentoOrden > 100 ||
+    descuentoOrden > descuento
+  ) {
+    throw new Error("El descuento total no puede superar el 100%.");
+  }
+}
+
+function validarVendedor(db, vendedorId) {
+  const id = Number(vendedorId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error("Selecciona un vendedor para la orden.");
+  }
+  const vendedor = db
+    .prepare("SELECT id, rol FROM usuarios WHERE id = ?")
+    .get(id);
+  if (!vendedor || vendedor.rol !== "vendedor") {
+    throw new Error("Selecciona un usuario con rol de vendedor.");
+  }
+  return vendedor.id;
+}
+
 function getAll(filtros = {}) {
   const db = getDb();
 
@@ -37,10 +67,12 @@ function getAll(filtros = {}) {
       o.*,
       c.nombre AS cliente_nombre,
       c.empresa AS cliente_empresa,
-      u.nombre AS usuario_nombre
+      u.nombre AS usuario_nombre,
+      v.nombre AS vendedor_nombre
     FROM ordenes o
     LEFT JOIN clientes c ON o.cliente_id = c.id
     LEFT JOIN usuarios u ON o.usuario_id = u.id
+    LEFT JOIN usuarios v ON o.vendedor_id = v.id
     WHERE 1=1
   `;
   const params = [];
@@ -82,10 +114,12 @@ function getById(id) {
         c.telefono AS cliente_telefono,
         c.correo AS cliente_correo,
         c.direccion AS cliente_direccion,
-        u.nombre AS usuario_nombre
+        u.nombre AS usuario_nombre,
+        v.nombre AS vendedor_nombre
       FROM ordenes o
       LEFT JOIN clientes c ON o.cliente_id = c.id
       LEFT JOIN usuarios u ON o.usuario_id = u.id
+      LEFT JOIN usuarios v ON o.vendedor_id = v.id
       WHERE o.id = ?
     `,
     )
@@ -140,9 +174,12 @@ function create(data) {
     const {
       detalle = [],
       descuento_porcentaje = 0,
+      descuento_orden_porcentaje = 0,
       ship_to_cliente_id,
       ...ordenData
     } = data;
+    validarDescuento(descuento_porcentaje, descuento_orden_porcentaje);
+    const vendedor_id = validarVendedor(db, ordenData.vendedor_id);
     const shipTo = obtenerDatosShipTo(db, ship_to_cliente_id);
 
     const subtotal = detalle.reduce((sum, item) => sum + item.subtotal, 0);
@@ -155,17 +192,21 @@ function create(data) {
       INSERT INTO ordenes
         (cliente_id, ship_to_cliente_id, ship_to_nombre, ship_to_empresa,
          ship_to_direccion, ship_to_telefono, ship_to_correo, fecha_entrega,
-         estado, estado_pago, total, notas, usuario_id)
+         estado, estado_pago, total, descuento_orden_porcentaje, notas, usuario_id,
+         vendedor_id)
       VALUES
         (@cliente_id, @ship_to_cliente_id, @ship_to_nombre, @ship_to_empresa,
          @ship_to_direccion, @ship_to_telefono, @ship_to_correo, @fecha_entrega,
-         @estado, @estado_pago, @total, @notas, @usuario_id)
+         @estado, @estado_pago, @total, @descuento_orden_porcentaje, @notas, @usuario_id,
+         @vendedor_id)
     `,
       )
       .run({
         ...ordenData,
         ...shipTo,
         total,
+        descuento_orden_porcentaje: Number(descuento_orden_porcentaje),
+        vendedor_id,
         estado: "pendiente",
         estado_pago: "pendiente",
       });
@@ -223,12 +264,6 @@ function create(data) {
   return transaction(data);
 }
 
-function updateEstado(id, estado) {
-  const db = getDb();
-  db.prepare(`UPDATE ordenes SET estado = ? WHERE id = ?`).run(estado, id);
-  return getById(id);
-}
-
 function updateEstadoPago(id, estado_pago) {
   const db = getDb();
   db.prepare(`UPDATE ordenes SET estado_pago = ? WHERE id = ?`).run(
@@ -248,7 +283,8 @@ function getResumen() {
         SUM(total) AS monto_total,
         SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) AS pendientes,
         SUM(CASE WHEN estado = 'en_proceso' THEN 1 ELSE 0 END) AS en_proceso,
-        SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) AS completadas
+        SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) AS completadas,
+        SUM(CASE WHEN estado = 'procesada' THEN 1 ELSE 0 END) AS procesadas
       FROM ordenes
     `,
     )
@@ -267,9 +303,27 @@ function update(id, data) {
     const {
       detalle = [],
       descuento_porcentaje = 0,
+      descuento_orden_porcentaje,
       ship_to_cliente_id,
       ...ordenData
     } = data;
+    const descuentoOrden = Number(
+      descuento_orden_porcentaje ?? existingOrder.descuento_orden_porcentaje ?? 0,
+    );
+    validarDescuento(descuento_porcentaje, descuentoOrden);
+    const vendedor_id = validarVendedor(
+      db,
+      ordenData.vendedor_id ?? existingOrder.vendedor_id,
+    );
+    const facturaExistente = db
+      .prepare("SELECT id FROM facturas WHERE orden_id = ?")
+      .get(id);
+    if (
+      facturaExistente &&
+      Number(existingOrder.vendedor_id) !== Number(vendedor_id)
+    ) {
+      throw new Error("No se puede cambiar el vendedor de una orden facturada.");
+    }
     const shipTo = obtenerDatosShipTo(db, ship_to_cliente_id);
     const subtotal = detalle.reduce((sum, item) => sum + item.subtotal, 0);
     const descuentoMonto = subtotal * (Number(descuento_porcentaje) / 100);
@@ -338,9 +392,11 @@ function update(id, data) {
           ship_to_telefono = @ship_to_telefono,
           ship_to_correo = @ship_to_correo,
           fecha_entrega = @fecha_entrega,
+          descuento_orden_porcentaje = @descuento_orden_porcentaje,
           notas = @notas,
           total = @total,
-          usuario_id = @usuario_id
+          usuario_id = @usuario_id,
+          vendedor_id = @vendedor_id
       WHERE id = @id
     `,
     ).run({
@@ -348,9 +404,11 @@ function update(id, data) {
       ...shipTo,
       cliente_id: clienteId,
       fecha_entrega: ordenData.fecha_entrega || null,
+      descuento_orden_porcentaje: descuentoOrden,
       notas: ordenData.notas || null,
       total,
       usuario_id: usuarioId,
+      vendedor_id,
       id,
     });
 
@@ -395,7 +453,6 @@ module.exports = {
   getById,
   create,
   update,
-  updateEstado,
   updateEstadoPago,
   getResumen,
 };
