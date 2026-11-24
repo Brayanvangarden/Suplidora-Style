@@ -1,6 +1,11 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
+  tienda: {
+    get: () => ipcRenderer.invoke("tienda:get"),
+    update: (data) => ipcRenderer.invoke("tienda:update", data),
+  },
+
   // ══════════════════════════════════════
   //  AUTH
   // ══════════════════════════════════════
@@ -80,6 +85,14 @@ contextBridge.exposeInMainWorld("api", {
     deletePrecioEspecial: (id) =>
       ipcRenderer.invoke("clientes:precios:delete", id),
     importBulk: (filas) => ipcRenderer.invoke("clientes:importBulk", filas),
+  },
+
+  proveedores: {
+    getAll: (options) => ipcRenderer.invoke("proveedores:getAll", options),
+    getById: (id) => ipcRenderer.invoke("proveedores:getById", id),
+    create: (data) => ipcRenderer.invoke("proveedores:create", data),
+    update: (data) => ipcRenderer.invoke("proveedores:update", data),
+    toggleEstado: (id, estado) => ipcRenderer.invoke("proveedores:toggleEstado", { id, estado }),
   },
 
   // ══════════════════════════════════════

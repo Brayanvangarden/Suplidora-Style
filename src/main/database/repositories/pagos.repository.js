@@ -1,5 +1,6 @@
 const { getDb } = require("../db");
 const facturasRepository = require("./facturas.repository");
+const tiendaRepository = require("./tienda.repository");
 
 function getAll(filtros = {}) {
   let query = `
@@ -62,6 +63,23 @@ function create(data) {
   const transaction = db.transaction((data) => {
     if (!data.orden_id) {
       throw new Error("Todo pago debe estar ligado a una orden");
+    }
+
+    const metodosAceptados = tiendaRepository.get();
+    const metodosConfigurados = {
+      efectivo: Boolean(metodosAceptados.acepta_efectivo),
+      sinpe_movil: Boolean(metodosAceptados.acepta_sinpe),
+      sinpe: Boolean(metodosAceptados.acepta_sinpe),
+      datafono: Boolean(metodosAceptados.acepta_tarjeta),
+    };
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        metodosConfigurados,
+        data.metodo_pago,
+      ) ||
+      !metodosConfigurados[data.metodo_pago]
+    ) {
+      throw new Error("El método de pago no está habilitado en la configuración de la tienda.");
     }
 
     const monto = Number(data.monto);

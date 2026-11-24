@@ -12,6 +12,7 @@ import Productos from "../pages/Productos";
 import Categorias from "../pages/Categorias";
 import Inventario from "../pages/Inventario";
 import Clientes from "../pages/Clientes";
+import Proveedores from "../pages/Proveedores";
 import Ordenes from "../pages/Ordenes";
 import Pagos from "../pages/Pagos";
 import Facturas from "../pages/Facturas";
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/categorias" element={<Categorias />} />
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/clientes" element={<Clientes />} />
+        <Route path="/proveedores" element={<Proveedores />} />
         <Route path="/ordenes" element={<Ordenes />} />
         <Route path="/pagos" element={<Pagos />} />
         <Route path="/facturas" element={<Facturas />} />

@@ -1,13 +1,5 @@
 const { getDb } = require("../db");
-
-const EMPRESA = {
-  nombre: "BeYou",
-  comercial: "BeYou",
-  identificacion: "Identificación fiscal pendiente",
-  direccion: "San José, Costa Rica",
-  telefono: "Teléfono pendiente",
-  correo: "admin@example.com",
-};
+const tiendaRepository = require("./tienda.repository");
 
 function registrarComision(db, ordenId, facturaId) {
   const comisionExistente = db
@@ -97,6 +89,7 @@ function crearParaPago(pagoId, ordenId) {
     .get().siguiente;
   const numero = `FAC-${new Date().getFullYear()}-${String(siguienteNumero).padStart(6, "0")}`;
   const nombreCliente = orden.nombre || orden.empresa || "Cliente";
+  const tienda = tiendaRepository.get();
 
   const result = db
     .prepare(
@@ -133,12 +126,19 @@ function crearParaPago(pagoId, ordenId) {
       ship_to_direccion: orden.ship_to_direccion,
       ship_to_telefono: orden.ship_to_telefono,
       ship_to_correo: orden.ship_to_correo,
-      empresa_nombre: EMPRESA.nombre,
-      empresa_comercial: EMPRESA.comercial,
-      empresa_identificacion: EMPRESA.identificacion,
-      empresa_direccion: EMPRESA.direccion,
-      empresa_telefono: EMPRESA.telefono,
-      empresa_correo: EMPRESA.correo,
+      empresa_nombre: tienda.nombre_comercial,
+      empresa_comercial: tienda.nombre_comercial,
+      empresa_identificacion: `${tienda.tipo_identificacion}: ${tienda.numero_identificacion}`,
+      empresa_direccion: [
+        tienda.direccion,
+        tienda.ubicacion_referencia,
+        tienda.distrito,
+        tienda.canton,
+        tienda.provincia,
+        tienda.pais,
+      ].filter(Boolean).join(", "),
+      empresa_telefono: tienda.telefono,
+      empresa_correo: tienda.correo,
       cliente_nombre: nombreCliente,
       cliente_identificacion: orden.empresa,
       cliente_correo: orden.correo,
@@ -180,8 +180,22 @@ function getById(id) {
   const db = getDb();
   const factura = db.prepare("SELECT * FROM facturas WHERE id = ?").get(id);
   if (!factura) return null;
+  const tienda = tiendaRepository.get();
   return {
     ...factura,
+    empresa_nombre: tienda.nombre_comercial,
+    empresa_nombre_comercial: tienda.nombre_comercial,
+    empresa_identificacion: `${tienda.tipo_identificacion}: ${tienda.numero_identificacion}`,
+    empresa_direccion: [
+      tienda.direccion,
+      tienda.ubicacion_referencia,
+      tienda.distrito,
+      tienda.canton,
+      tienda.provincia,
+      tienda.pais,
+    ].filter(Boolean).join(", "),
+    empresa_telefono: tienda.telefono,
+    empresa_correo: tienda.correo,
     detalle: db
       .prepare(
         `

@@ -1,6 +1,6 @@
 const { ipcMain }   = require('electron')
 const productosRepo = require('../database/repositories/productos.repository')
-const { validarProductoImport } = require('../shared/validators/producto.validator')
+const { validarProducto, validarProductoImport } = require('../shared/validators/producto.validator')
 
 function registerProductosIpc() {
 
@@ -28,7 +28,9 @@ function registerProductosIpc() {
   // ── Crear ──────────────────────────────────────────
   ipcMain.handle('productos:create', async (_, formData) => {
     try {
-      const data = productosRepo.create(formData)
+      const validacion = validarProducto(formData)
+      if (!validacion.ok) return validacion
+      const data = productosRepo.create(validacion.data)
       return { ok: true, data, message: 'Producto creado correctamente' }
     } catch (error) {
       return { ok: false, message: error.message }
@@ -38,7 +40,11 @@ function registerProductosIpc() {
   // ── Actualizar ─────────────────────────────────────
   ipcMain.handle('productos:update', async (_, { id, ...formData }) => {
     try {
-      const data = productosRepo.update(id, formData)
+      const productoActual = productosRepo.getById(id)
+      if (!productoActual) return { ok: false, message: 'Producto no encontrado' }
+      const validacion = validarProducto({ ...productoActual, ...formData })
+      if (!validacion.ok) return validacion
+      const data = productosRepo.update(id, validacion.data)
       return { ok: true, data, message: 'Producto actualizado correctamente' }
     } catch (error) {
       return { ok: false, message: error.message }

@@ -1,40 +1,9 @@
 import { jsPDF } from "jspdf";
 import { formatDate } from "../utils/formatDate";
-
-export const COMPANY_LOGO_URL = new URL(
-  "../../../../assets/beyou-logo.svg",
-  import.meta.url,
-).href;
-
-let companyLogoPromise;
-
-function getCompanyLogo() {
-  if (!companyLogoPromise) {
-    companyLogoPromise = new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-        const context = canvas.getContext("2d");
-        if (!context) {
-          reject(new Error("No se pudo preparar el logo de la empresa."));
-          return;
-        }
-        context.drawImage(image, 0, 0);
-        resolve({
-          data: canvas.toDataURL("image/png"),
-          width: image.naturalWidth,
-          height: image.naturalHeight,
-        });
-      };
-      image.onerror = () =>
-        reject(new Error("No se pudo cargar el logo de la empresa."));
-      image.src = COMPANY_LOGO_URL;
-    });
-  }
-  return companyLogoPromise;
-}
+import { tiendaService } from "./tienda.service";
+import { getTiendaLineasDocumento } from "../utils/tiendaDocumento";
+import { formatMetodoPago } from "../utils/formatMetodoPago";
+import logoBelleza from "@assets/Logo de Belleza factura.jpg?inline";
 
 function formatOrdenNumero(id) {
   return `N.º ${String(Number(id ?? 0)).padStart(4, "0")}`;
@@ -42,7 +11,7 @@ function formatOrdenNumero(id) {
 
 function obtenerLineasShipTo(documento) {
   const direccion = documento?.ship_to_direccion || documento?.notas;
-  return String(direccion || "Address not provided")
+  return String(direccion || "Dirección no proporcionada")
     .split(/\r?\n/)
     .filter((line) => line.trim());
 }
@@ -52,7 +21,7 @@ function obtenerLineasBillTo(documento) {
     .map((line) => String(line || "").trim())
     .filter(Boolean);
 
-  return lineas.length ? lineas : ["Address not provided"];
+  return lineas.length ? lineas : ["Dirección no proporcionada"];
 }
 
 function dibujarCajasBillToShipTo(
@@ -82,8 +51,8 @@ function dibujarCajasBillToShipTo(
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  pdf.text("Bill to:", billX + 10, y + 18);
-  pdf.text("Ship to:", shipX + 10, y + 18);
+  pdf.text("Facturar a:", billX + 10, y + 18);
+  pdf.text("Enviar a:", shipX + 10, y + 18);
 
   pdf.setFont("helvetica", "normal");
   wrappedBill.forEach((line, index) => {
@@ -103,7 +72,7 @@ function monedaCRC(value) {
 }
 
 /**
- * Dibuja el bloque de "Payment method" (izquierda) y la caja de totales
+ * Dibuja el bloque de "Método de pago" (izquierda) y la caja de totales
  * (derecha) con las líneas/bordes del formato solicitado:
  * - Línea horizontal completa arriba del bloque.
  * - Línea vertical separando etiquetas y montos en la caja de totales.
@@ -122,7 +91,8 @@ function dibujarPieYPago(
     subtotal,
     descuento = 0,
     total,
-    impuestosLabel = "Included",
+    metodoPago,
+    impuestosLabel = "Incluido",
   },
 ) {
   const totalsLabelX = pageWidth - 170;
@@ -133,12 +103,12 @@ function dibujarPieYPago(
 
   const rows = [{ label: "Subtotal", value: monedaCRC(subtotal) }];
   if (descuento > 0) {
-    rows.push({ label: "Discount", value: `-${monedaCRC(descuento)}` });
+    rows.push({ label: "Descuento", value: `-${monedaCRC(descuento)}` });
   }
   rows.push(
-    { label: "Shipping", value: monedaCRC(0) },
-    { label: "Tax", value: impuestosLabel },
-    { label: "Deposit", value: monedaCRC(0) },
+    { label: "Envío", value: monedaCRC(0) },
+    { label: "Impuesto", value: impuestosLabel },
+    { label: "Depósito", value: monedaCRC(0) },
   );
 
   // Línea horizontal completa arriba de todo el bloque
@@ -174,48 +144,27 @@ function dibujarPieYPago(
   pdf.line(totalsLabelX - 10, totalY + 9, pageWidth - margin, totalY + 9);
   pdf.line(totalsLabelX - 10, totalY + 12, pageWidth - margin, totalY + 12);
 
-  // Bloque "Payment method" (columna izquierda)
+  // Bloque "Método de pago" (columna izquierda)
   pdf.setFontSize(9.5);
   pdf.setFont("helvetica", "bold");
-  pdf.text("Payment method", margin, startY + 4);
+  pdf.text("Método de pago:", margin, startY + 4);
   pdf.setFont("helvetica", "normal");
-  pdf.text("Checks may be sent ACH to:", margin, startY + 20);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("NATUR VITALIA LLC", margin, startY + 36);
-  pdf.setFont("helvetica", "normal");
-  pdf.text("Wells Fargo Bank", margin, startY + 52);
-  pdf.text("Account #2813330806", margin, startY + 68);
-  pdf.text("For direct deposit routing #063107513", margin, startY + 84);
-  pdf.text("For wire transfer routing #121000248", margin, startY + 100);
-  pdf.text(
-    `${monedaCRC(35)} Applies to all the checks returned for any reason`,
-    margin,
-    startY + 116,
+  const metodoLines = pdf.splitTextToSize(
+    formatMetodoPago(metodoPago),
+    totalsLabelX - margin - 10,
   );
+  pdf.text(metodoLines, margin, startY + 20);
 
-  const paymentBottom = startY + 116 + 14;
+  const paymentBottom = startY + 20 + metodoLines.length * 12;
   return Math.max(totalY + 12, paymentBottom);
 }
 
-function dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY }) {
-  const noteParagraphs = [
-    [
-      `1) Any payments to Natur Vitalia LLC greater or equal to ${monedaCRC(5000)} will need to be made in`,
-      "the form of a wire or credit card (CC 3% processing fee will be charged for any amount)",
-      "to facilitate a commencement of the order.",
-    ],
-    [
-      "2) Any payments via check (regardless of size) may delay commencement of the order",
-      "and/or delivery by up to 10 days from the date Natur Vitalia LLC receives the check.",
-    ],
-    [
-      "3) Payments must be done within 30 days after the order has been delivered.",
-    ],
-  ];
+function dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY, notas }) {
+  const texto = String(notas ?? "").trim();
+  if (!texto) return;
 
-  // Si no cabe en la página actual, agrega una nueva
-  const alturaEstimada =
-    14 + noteParagraphs.reduce((acc, p) => acc + p.length * 12 + 24, 0);
+  const noteLines = pdf.splitTextToSize(texto, pageWidth - margin * 2 - 42);
+  const alturaEstimada = noteLines.length * 12 + 14;
   let y = startY;
   if (y + alturaEstimada > pageHeight - 30) {
     pdf.addPage();
@@ -224,122 +173,28 @@ function dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY }) {
 
   pdf.setFontSize(9);
   pdf.setFont("helvetica", "bold");
-  pdf.text("*NOTE:", margin, y);
-  const noteLabelWidth = pdf.getTextWidth("*NOTE:");
+  pdf.text("Notas:", margin, y);
   pdf.setFont("helvetica", "normal");
-  pdf.text(" All orders must be paid as follows:", margin + noteLabelWidth, y);
-
-  let noteCursor = y + 14;
-  noteParagraphs.forEach((paragraph, paragraphIndex) => {
-    paragraph.forEach((line) => {
-      pdf.text(String(line), margin, noteCursor);
-      noteCursor += 12;
-    });
-    if (paragraphIndex < noteParagraphs.length - 1) {
-      noteCursor += 6;
-    }
-  });
+  pdf.text(noteLines, margin + 42, y);
 }
 
-async function dibujarEncabezado(
-  pdf,
-  {
-    pageWidth,
-    margin,
-    titulo,
-    numero,
-    layout = "horizontal",
-    companyInfo = [
-      "NATUR VITALIA LLC",
-      "7980 W 25th Ct. Hialeah, FL 33016",
-      "Tel. (754) 209-3195 / (954) 889-4019",
-    ],
-  },
-) {
-  const logo = await getCompanyLogo();
-  const stacked = layout === "stacked";
-  const maxLogoWidth = stacked ? 192 : 96;
-  const maxLogoHeight = stacked ? 128 : 64;
-  const logoScale = Math.min(
-    maxLogoWidth / logo.width,
-    maxLogoHeight / logo.height,
-  );
-  const logoWidth = logo.width * logoScale;
-  const logoHeight = logo.height * logoScale;
-  const logoX = margin;
-  const logoY = stacked
-    ? 24 + (maxLogoHeight - logoHeight) / 2
-    : 32 + (64 - logoHeight) / 2;
-
-  pdf.addImage(
-    logo.data,
-    "PNG",
-    logoX,
-    logoY,
-    logoWidth,
-    logoHeight,
-  );
-
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  if (stacked) {
-    const companyX = margin;
-    companyInfo.forEach((line, index) => {
-      pdf.text(line, companyX, 24 + maxLogoHeight + 18 + index * 14);
-    });
-  } else {
-    const companyX = margin + maxLogoWidth + 12;
-    companyInfo.forEach((line, index) => {
-      pdf.text(line, companyX, 48 + index * 14);
-    });
-  }
+function dibujarEncabezado(pdf, { pageWidth, margin, titulo, numero, companyInfo }) {
+  pdf.addImage(logoBelleza, "JPEG", margin, 28, 150, 48);
+  let infoY = 91;
+  const infoWidth = pageWidth - margin * 2 - 150;
+  companyInfo.slice(1).forEach((line) => {
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    const wrapped = pdf.splitTextToSize(String(line), infoWidth);
+    pdf.text(wrapped, margin, infoY);
+    infoY += wrapped.length * 12;
+  });
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
-  pdf.text(titulo, pageWidth - 150, 52);
+  pdf.text(titulo, pageWidth - margin, 52, { align: "right" });
   pdf.setFontSize(11);
-  pdf.text(numero, pageWidth - 150, 72);
-}
-
-function dibujarDatosOrden(pdf, { orden, margin, pageWidth, startY }) {
-  const labelX = margin;
-  const valueX = margin + 52;
-  const contentWidth = pageWidth - valueX - margin;
-
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Cliente:", labelX, startY);
-  pdf.setFont("helvetica", "normal");
-  const clienteLines = pdf.splitTextToSize(
-    orden?.cliente_nombre || "Sin cliente",
-    contentWidth,
-  );
-  pdf.text(clienteLines, valueX, startY);
-
-  let y = startY + Math.max(18, clienteLines.length * 12);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Fecha de emisión:", labelX, y);
-  pdf.setFont("helvetica", "normal");
-  pdf.text(formatDate(orden?.fecha_creacion), valueX + 52, y);
-  if (orden?.fecha_entrega) {
-    const entregaX = pageWidth / 2 + 20;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Fecha de entrega:", entregaX, y);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(formatDate(orden.fecha_entrega), entregaX + 92, y);
-  }
-  y += 18;
-
-  if (orden?.notas) {
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Notas:", labelX, y);
-    pdf.setFont("helvetica", "normal");
-    const notas = pdf.splitTextToSize(String(orden.notas), contentWidth);
-    pdf.text(notas, valueX, y);
-    y += notas.length * 12;
-  }
-
-  return y + 10;
+  pdf.text(numero, pageWidth - margin, 72, { align: "right" });
 }
 
 function dibujarTotalesProforma(
@@ -382,12 +237,13 @@ async function crearPdf(factura) {
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 42;
   const boxWidth = pageWidth / 2 - 70;
-  await dibujarEncabezado(pdf, {
+  const tienda = await tiendaService.get();
+  dibujarEncabezado(pdf, {
     pageWidth,
     margin,
-    titulo: "INVOICE",
-    numero: `No. ${String(factura.orden_id ?? 0).padStart(4, "0")}`,
-    layout: "stacked",
+    titulo: "FACTURA",
+    numero: `N.º ${String(factura.orden_id ?? 0).padStart(4, "0")}`,
+    companyInfo: getTiendaLineasDocumento(tienda),
   });
 
   const billX = margin;
@@ -404,10 +260,10 @@ async function crearPdf(factura) {
   });
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
-  pdf.text("Item No.", margin, y);
-  pdf.text("Description", 120, y);
-  pdf.text("Quantity", 350, y);
-  pdf.text("Unit Price", 420, y);
+  pdf.text("Código", margin, y);
+  pdf.text("Descripción", 120, y);
+  pdf.text("Cantidad", 350, y);
+  pdf.text("Precio unitario", 420, y);
   pdf.text("Total", 500, y);
   pdf.setDrawColor(180, 180, 180);
   pdf.line(margin, y + 4, pageWidth - margin, y + 4);
@@ -431,7 +287,7 @@ async function crearPdf(factura) {
       y = 40;
     }
 
-    const description = item.descripcion || item.producto_nombre || "Product";
+    const description = item.descripcion || item.producto_nombre || "Producto";
     const itemNo = String(item.codigo_producto || item.producto_id || "-");
     const quantity = Number(item.cantidad ?? 0);
     const unitPrice = Number(item.precio_unitario ?? item.precio ?? 0);
@@ -456,9 +312,16 @@ async function crearPdf(factura) {
     subtotal,
     descuento,
     total,
+    metodoPago: factura.metodo_pago,
   });
 
-  dibujarNotas(pdf, { margin, pageWidth, pageHeight, startY: bottomY + 34 });
+  dibujarNotas(pdf, {
+    margin,
+    pageWidth,
+    pageHeight,
+    startY: bottomY + 34,
+    notas: factura.notas,
+  });
 
   return pdf;
 }
@@ -468,20 +331,29 @@ async function crearProformaPdf(orden) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 42;
-  await dibujarEncabezado(pdf, {
+  const tienda = await tiendaService.get();
+  dibujarEncabezado(pdf, {
     pageWidth,
     margin,
     titulo: "PROFORMA",
     numero: `Orden N.º ${String(orden?.id ?? 0).padStart(4, "0")}`,
-    layout: "stacked",
-    companyInfo: ["Suplidora y academia de belleza Style"],
+    companyInfo: getTiendaLineasDocumento(tienda),
   });
 
-  let y = dibujarDatosOrden(pdf, {
-    orden,
-    margin,
-    pageWidth,
-    startY: 226,
+  const boxWidth = pageWidth / 2 - 70;
+  let y = dibujarCajasBillToShipTo(pdf, {
+    billX: margin,
+    shipX: pageWidth / 2 + 12,
+    y: 230,
+    boxWidth,
+    billToLines: obtenerLineasBillTo({
+      cliente_nombre: orden?.cliente_nombre,
+      cliente_direccion: orden?.cliente_direccion,
+    }),
+    shipToLines: obtenerLineasShipTo({
+      ship_to_direccion: orden?.ship_to_direccion || orden?.cliente_direccion,
+      notas: orden?.notas,
+    }),
   });
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);

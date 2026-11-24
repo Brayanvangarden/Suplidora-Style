@@ -7,11 +7,12 @@ import Factura from "../components/Factura";
 import { facturasService } from "../services/facturas.service";
 import { formatCRC } from "../utils/currency";
 import { formatMetodoPago } from "../utils/formatMetodoPago";
+import { useTienda } from "../hooks/useTienda";
 
 const METODOS_PAGO = [
-  { value: "efectivo", label: "Efectivo" },
-  { value: "datafono", label: "Datáfono" },
-  { value: "sinpe_movil", label: "Sinpe Móvil" },
+  { value: "efectivo", label: "Efectivo", key: "efectivo" },
+  { value: "sinpe_movil", label: "SINPE", key: "sinpe" },
+  { value: "datafono", label: "Tarjeta", key: "tarjeta" },
 ];
 
 const formatOrdenNumero = (id) =>
@@ -27,6 +28,14 @@ function Pagos() {
   const { pagos, resumen, loading, error, registrarPago } = usePagos();
   const { clientes, fetchClientes } = useClientes();
   const { ordenes, fetchOrdenes } = useOrdenes();
+  const { tienda, error: errorTienda } = useTienda();
+  const metodosPagoDisponibles = useMemo(
+    () =>
+      tienda
+        ? METODOS_PAGO.filter((metodo) => tienda.metodosPago[metodo.key])
+        : [],
+    [tienda],
+  );
 
   const [form, setForm] = useState({
     clienteId: "",
@@ -45,6 +54,19 @@ function Pagos() {
   const [facturaReciente, setFacturaReciente] = useState(null);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
   const [cargandoFacturaId, setCargandoFacturaId] = useState(null);
+
+  useEffect(() => {
+    if (
+      metodosPagoDisponibles.length > 0 &&
+      !metodosPagoDisponibles.some((metodo) => metodo.value === form.metodoPago)
+    ) {
+      setForm((current) => ({
+        ...current,
+        metodoPago: metodosPagoDisponibles[0].value,
+        referencia: "",
+      }));
+    }
+  }, [metodosPagoDisponibles, form.metodoPago]);
 
   const limpiarPantalla = () => {
     setForm({
@@ -594,6 +616,7 @@ function Pagos() {
                 <label>Método de pago</label>
                 <select
                   value={form.metodoPago}
+                  disabled={!tienda || metodosPagoDisponibles.length === 0}
                   onChange={(e) => {
                     const metodo = e.target.value;
                     setForm({
@@ -603,7 +626,7 @@ function Pagos() {
                     });
                   }}
                 >
-                  {METODOS_PAGO.map((metodo) => (
+                  {metodosPagoDisponibles.map((metodo) => (
                     <option key={metodo.value} value={metodo.value}>
                       {metodo.label}
                     </option>
@@ -675,7 +698,7 @@ function Pagos() {
           <button
             className="btn-primary"
             type="submit"
-            disabled={!ordenSeleccionada}
+            disabled={!ordenSeleccionada || !tienda || metodosPagoDisponibles.length === 0}
           >
             Registrar pago
           </button>
@@ -790,7 +813,7 @@ function Pagos() {
                           >
                             {cargandoFacturaId === pago.id
                               ? "Cargando..."
-                              : "Generar factura"}
+                              : "Ver factura"}
                           </button>
                         ) : (
                           <span className="text-muted">Sin orden asociada</span>
@@ -806,6 +829,7 @@ function Pagos() {
       </div>
 
       {error && <p className="message-error">{error}</p>}
+      {errorTienda && <p className="message-error">{errorTienda}</p>}
       <Factura
         factura={facturaSeleccionada}
         onClose={() => setFacturaSeleccionada(null)}

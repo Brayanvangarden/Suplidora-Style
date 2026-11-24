@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { cuentasPorCobrarService } from "../services/cuentasPorCobrar.service";
 import { formatCRC } from "../utils/currency";
 import { formatMetodoPago } from "../utils/formatMetodoPago";
+import { tiendaService } from "../services/tienda.service";
+import { getTiendaLineasDocumento } from "../utils/tiendaDocumento";
 
 const ESTADOS = {
   al_dia: "Al día",
@@ -101,54 +103,63 @@ function CuentasPorCobrar() {
     }
   };
 
-  const descargarEstadoCuenta = () => {
+  const descargarEstadoCuenta = async () => {
     if (!estadoCuenta || !clienteSeleccionado) return;
+    setError("");
 
-    const fechaLarga = (valor) =>
-      valor
-        ? new Date(valor).toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          })
+    try {
+      const tienda = await tiendaService.get();
+      const lineasTienda = getTiendaLineasDocumento(tienda);
+
+      const fechaLarga = (valor) =>
+        valor
+          ? new Date(valor).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "—";
+
+      const movimientos = estadoCuenta.movimientos ?? [];
+      const fechaInicio = movimientos.length
+        ? fechaLarga(movimientos[0].fecha)
+        : "—";
+      const fechaFin = movimientos.length
+        ? fechaLarga(movimientos[movimientos.length - 1].fecha)
         : "—";
 
-    const movimientos = estadoCuenta.movimientos ?? [];
-    const fechaInicio = movimientos.length
-      ? fechaLarga(movimientos[0].fecha)
-      : "—";
-    const fechaFin = movimientos.length
-      ? fechaLarga(movimientos[movimientos.length - 1].fecha)
-      : "—";
+      const documentoDe = (movimiento) => {
+        if (movimiento.numero_factura) return movimiento.numero_factura;
+        if (movimiento.tipo === "pago") {
+          return `P${String(movimiento.pago_id).padStart(4, "0")}`;
+        }
+        return String(movimiento.orden_id).padStart(4, "0");
+      };
 
-    const documentoDe = (movimiento) => {
-      if (movimiento.numero_factura) return movimiento.numero_factura;
-      if (movimiento.tipo === "pago") {
-        return `P${String(movimiento.pago_id).padStart(4, "0")}`;
-      }
-      return String(movimiento.orden_id).padStart(4, "0");
-    };
-
-    const filas = movimientos
-      .map((movimiento) => {
-        const esOrden = movimiento.tipo === "venta";
-        return `
+      const filas = movimientos
+        .map((movimiento) => {
+          const esOrden = movimiento.tipo === "venta";
+          return `
         <tr>
           <td>${escaparHtml(fechaLarga(movimiento.fecha))}</td>
           <td>${escaparHtml(documentoDe(movimiento))}</td>
-          <td>${esOrden ? "Orden" : "Pago"}</td>
+          <td>${esOrden ? "Orden" : `Pago · ${escaparHtml(formatMetodoPago(movimiento.metodo_pago))}`}</td>
           <td class="charge">${formatCRC(esOrden ? movimiento.monto : 0)}</td>
           <td class="payment">${formatCRC(!esOrden ? Math.abs(movimiento.monto) : 0)}</td>
           <td>${formatCRC(movimiento.saldo)}</td>
         </tr>`;
-      })
-      .join("");
+        })
+        .join("");
+      const lineasDatosTienda = lineasTienda
+        .slice(1)
+        .map(escaparHtml)
+        .join("<br/>");
 
-    const html = `
+      const html = `
     <html><head><meta charset="UTF-8"><style>
       body { font-family: Arial, sans-serif; color: #111827; }
       .header-row { width: 100%; }
-      .logo { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
+      .business-name { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
       .company-info { font-size: 11px; color: #374151; margin-top: 4px; }
       .statement-title { font-size: 24px; font-weight: bold; text-align: right; }
       .period { text-align: center; font-size: 12px; margin: 10px 0; }
@@ -184,11 +195,9 @@ function CuentasPorCobrar() {
     </style></head><body>
       <table class="header-row"><tr>
         <td style="width:60%">
-          <div class="logo">BeYou</div>
+          <div class="business-name">${escaparHtml(lineasTienda[0] || tienda.nombreComercial)}</div>
           <div class="company-info">
-            NATUR VITALIA LLC<br/>
-            7980 W 25th Ct. Hialeah, FL 33016<br/>
-            Tel. (754) 209-3195 / (954) 889-4019
+            ${lineasDatosTienda}
           </div>
         </td>
         <td style="width:40%"><div class="statement-title">Account Statement</div></td>
@@ -231,6 +240,9 @@ function CuentasPorCobrar() {
     enlace.download = `account-statement-${clienteSeleccionado.nombre.replace(/[^a-z0-9]+/gi, "-")}-${mesSeleccionado || "general"}.xls`;
     enlace.click();
     URL.revokeObjectURL(enlace.href);
+    } catch (downloadError) {
+      setError(downloadError.message || "No se pudo generar el estado de cuenta.");
+    }
   };
 
   const resumen = useMemo(

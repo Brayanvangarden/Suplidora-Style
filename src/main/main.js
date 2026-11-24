@@ -13,12 +13,14 @@ const { registerCategoriasIpc } = require("./ipc/categorias.ipc");
 const { registerProductosIpc } = require("./ipc/productos.ipc");
 const { registerInventarioIpc } = require("./ipc/inventario.ipc");
 const { registerClientesIpc } = require("./ipc/clientes.ipc");
+const { registerProveedoresIpc } = require("./ipc/proveedores.ipc");
 const { registerOrdenesIpc } = require("./ipc/ordenes.ipc");
 const { registerPagosIpc } = require("./ipc/pagos.ipc");
 const { registerFacturasIpc } = require("./ipc/facturas.ipc");
 const { registerCuentasPorCobrarIpc } = require("./ipc/cuentas_por_cobrar.ipc");
 const { registerUsuariosIpc } = require("./ipc/usuarios.ipc");
 const { registerVendedoresIpc } = require("./ipc/vendedores.ipc");
+const { registerTiendaIpc } = require("./ipc/tienda.ipc");
 
 function getDevUrl() {
   const ports = [4173, 4174, 4175, 5173, 5174];
@@ -83,12 +85,14 @@ app
     registerProductosIpc();
     registerInventarioIpc();
     registerClientesIpc();
+    registerProveedoresIpc();
     registerOrdenesIpc();
     registerPagosIpc();
     registerFacturasIpc();
     registerCuentasPorCobrarIpc();
     registerUsuariosIpc();
     registerVendedoresIpc();
+    registerTiendaIpc();
 
     // 3️⃣ Crear ventana
     createWindow();

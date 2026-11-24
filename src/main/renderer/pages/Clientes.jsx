@@ -103,12 +103,27 @@ function DownloadIcon(props) {
 const EMPTY_FORM = {
   nombre: "",
   empresa: "",
+  tipo_cliente: "otro",
+  tipo_identificacion: "otro",
+  numero_identificacion: "",
   telefono: "",
+  telefono_secundario: "",
   correo: "",
+  correo_facturacion: "",
+  persona_contacto: "",
   direccion: "",
+  provincia: "",
+  canton: "",
+  distrito: "",
+  barrio: "",
+  codigo_postal: "",
+  actividad_economica: "",
+  codigo_actividad_economica: "",
+  requiere_factura_electronica: false,
   notas: "",
   tiene_descuento: false,
   descuento_porcentaje: 0,
+  estado: "activo",
 };
 
 const bloquearTeclasNoNumericas = (event) => {
@@ -176,12 +191,29 @@ function Clientes() {
     setForm({
       nombre: cliente.nombre || "",
       empresa: cliente.empresa || "",
+      tipo_cliente: cliente.tipo_cliente || "otro",
+      tipo_identificacion: cliente.tipo_identificacion || "otro",
+      numero_identificacion: cliente.numero_identificacion || "",
       telefono: cliente.telefono || "",
+      telefono_secundario: cliente.telefono_secundario || "",
       correo: cliente.correo || "",
+      correo_facturacion: cliente.correo_facturacion || "",
+      persona_contacto: cliente.persona_contacto || "",
       direccion: cliente.direccion || "",
+      provincia: cliente.provincia || "",
+      canton: cliente.canton || "",
+      distrito: cliente.distrito || "",
+      barrio: cliente.barrio || "",
+      codigo_postal: cliente.codigo_postal || "",
+      actividad_economica: cliente.actividad_economica || "",
+      codigo_actividad_economica: cliente.codigo_actividad_economica || "",
+      requiere_factura_electronica: Boolean(
+        cliente.requiere_factura_electronica,
+      ),
       notas: cliente.notas || "",
       tiene_descuento: cliente.tiene_descuento || false,
       descuento_porcentaje: cliente.descuento_porcentaje ?? 0,
+      estado: cliente.estado || "activo",
     });
     setMensaje("");
     setTab("editar");
@@ -282,6 +314,20 @@ function Clientes() {
       "Descuento porcentaje",
       "Estado",
       "Notas",
+      "Tipo de cliente",
+      "Tipo de identificación",
+      "Número de identificación",
+      "Teléfono secundario",
+      "Correo para comprobantes",
+      "Persona de contacto",
+      "Provincia",
+      "Cantón",
+      "Distrito",
+      "Barrio",
+      "Código postal",
+      "Actividad económica",
+      "Código de actividad económica",
+      "Requiere factura electrónica",
     ];
 
     const escapar = (valor) => {
@@ -304,6 +350,20 @@ function Clientes() {
         c.descuento_porcentaje,
         c.estado,
         c.notas,
+        c.tipo_cliente,
+        c.tipo_identificacion,
+        c.numero_identificacion,
+        c.telefono_secundario,
+        c.correo_facturacion,
+        c.persona_contacto,
+        c.provincia,
+        c.canton,
+        c.distrito,
+        c.barrio,
+        c.codigo_postal,
+        c.actividad_economica,
+        c.codigo_actividad_economica,
+        c.requiere_factura_electronica ? "true" : "false",
       ]
         .map(escapar)
         .join(";"),
@@ -367,6 +427,20 @@ function Clientes() {
         descuento_porcentaje,
         estado,
         notas,
+        tipo_cliente,
+        tipo_identificacion,
+        numero_identificacion,
+        telefono_secundario,
+        correo_facturacion,
+        persona_contacto,
+        provincia,
+        canton,
+        distrito,
+        barrio,
+        codigo_postal,
+        actividad_economica,
+        codigo_actividad_economica,
+        requiere_factura_electronica,
       ] = parsearLinea(linea);
       return {
         nombre,
@@ -375,10 +449,24 @@ function Clientes() {
         correo,
         direccion,
         balance_pendiente,
-        tiene_descuento: tiene_descuento === "true",
+        tiene_descuento,
         descuento_porcentaje,
         estado,
         notas,
+        tipo_cliente,
+        tipo_identificacion,
+        numero_identificacion,
+        telefono_secundario,
+        correo_facturacion,
+        persona_contacto,
+        provincia,
+        canton,
+        distrito,
+        barrio,
+        codigo_postal,
+        actividad_economica,
+        codigo_actividad_economica,
+        requiere_factura_electronica,
       };
     });
 
@@ -415,106 +503,366 @@ function Clientes() {
 
   const renderFormulario = (onSubmit) => (
     <form onSubmit={onSubmit} className="modal-form">
-      <div className="form-grid">
-        <div className="form-group">
-          <label>Nombre *</label>
-          <input
-            type="text"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            placeholder="Nombre del cliente"
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Empresa *</label>
-          <input
-            type="text"
-            value={form.empresa}
-            onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-            placeholder="Nombre de la empresa"
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Teléfono *</label>
-          <input
-            type="tel"
-            value={form.telefono}
-            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-            placeholder="Ej: 8888-8888"
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Correo Electrónico *</label>
-          <input
-            type="email"
-            value={form.correo}
-            onChange={(e) => setForm({ ...form, correo: e.target.value })}
-            placeholder="correo@ejemplo.com"
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Dirección *</label>
-          <input
-            type="text"
-            value={form.direccion}
-            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-            placeholder="Dirección del cliente"
-            required
-          />
-        </div>
-
-        <div className="form-group full-width">
-          <label>Notas *</label>
-          <textarea
-            rows={3}
-            value={form.notas}
-            onChange={(e) => setForm({ ...form, notas: e.target.value })}
-            placeholder="Observaciones o información adicional..."
-            required
-          />
-        </div>
-
-        <div className="form-group full-width descuento-toggle">
-          <label className="checkbox-inline" htmlFor="tiene_descuento">
-            <input
-              id="tiene_descuento"
-              type="checkbox"
-              checked={form.tiene_descuento}
-              onChange={(e) =>
-                setForm({ ...form, tiene_descuento: e.target.checked })
-              }
-            />
-            <span>Aplica descuento</span>
-          </label>
-        </div>
-
-        {form.tiene_descuento && (
-          <div className="form-group">
-            <label>Porcentaje de descuento (%) *</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={form.descuento_porcentaje}
-              required
-              onKeyDown={bloquearTeclasNoNumericas}
-              onChange={(e) => {
-                const value = aceptarPorcentaje(e.target.value);
-                if (value !== null) {
-                  setForm({ ...form, descuento_porcentaje: value });
+      <div className="customer-form-sections">
+        <details className="customer-form-section" open>
+          <summary>1. Información general</summary>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="cliente-tipo">Tipo de cliente</label>
+              <select
+                id="cliente-tipo"
+                value={form.tipo_cliente}
+                onChange={(e) =>
+                  setForm({ ...form, tipo_cliente: e.target.value })
                 }
-              }}
-              placeholder="Ej: 5"
-            />
+              >
+                <option value="persona_fisica">Persona física</option>
+                <option value="persona_juridica">Persona jurídica</option>
+                <option value="extranjero">Extranjero</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-identificacion-tipo">
+                Tipo de identificación
+              </label>
+              <select
+                id="cliente-identificacion-tipo"
+                value={form.tipo_identificacion}
+                onChange={(e) =>
+                  setForm({ ...form, tipo_identificacion: e.target.value })
+                }
+              >
+                <option value="cedula_fisica">Cédula física</option>
+                <option value="cedula_juridica">Cédula jurídica</option>
+                <option value="dimex">DIMEX</option>
+                <option value="nite">NITE</option>
+                <option value="otro">Otro tipo de identificación</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-identificacion-numero">
+                Número de identificación
+              </label>
+              <input
+                id="cliente-identificacion-numero"
+                type="text"
+                value={form.numero_identificacion}
+                onChange={(e) =>
+                  setForm({ ...form, numero_identificacion: e.target.value })
+                }
+                placeholder="Opcional"
+                maxLength={40}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-nombre">
+                {form.tipo_cliente === "persona_fisica"
+                  ? "Nombre completo *"
+                  : form.tipo_cliente === "persona_juridica"
+                    ? "Razón social *"
+                    : "Nombre o razón social *"}
+              </label>
+              <input
+                id="cliente-nombre"
+                type="text"
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                placeholder="Nombre completo o razón social"
+                maxLength={200}
+                required
+              />
+            </div>
+            <div className="form-group full-width">
+              <label htmlFor="cliente-comercial">
+                Nombre comercial (opcional)
+              </label>
+              <input
+                id="cliente-comercial"
+                type="text"
+                value={form.empresa}
+                onChange={(e) => setForm({ ...form, empresa: e.target.value })}
+                placeholder="Nombre comercial o empresa"
+                maxLength={200}
+              />
+            </div>
           </div>
-        )}
+        </details>
+
+        <details className="customer-form-section">
+          <summary>2. Contacto</summary>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="cliente-telefono">Teléfono principal</label>
+              <input
+                id="cliente-telefono"
+                type="tel"
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                placeholder="Ej.: 8888-8888"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-telefono-secundario">
+                Teléfono secundario
+              </label>
+              <input
+                id="cliente-telefono-secundario"
+                type="tel"
+                value={form.telefono_secundario}
+                onChange={(e) =>
+                  setForm({ ...form, telefono_secundario: e.target.value })
+                }
+                placeholder="Opcional"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-correo">Correo general</label>
+              <input
+                id="cliente-correo"
+                type="email"
+                value={form.correo}
+                onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                placeholder="correo@ejemplo.com"
+                maxLength={254}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-persona-contacto">
+                Persona de contacto
+              </label>
+              <input
+                id="cliente-persona-contacto"
+                type="text"
+                value={form.persona_contacto}
+                onChange={(e) =>
+                  setForm({ ...form, persona_contacto: e.target.value })
+                }
+                placeholder="Nombre de contacto"
+                maxLength={200}
+              />
+            </div>
+          </div>
+        </details>
+
+        <details className="customer-form-section">
+          <summary>3. Dirección</summary>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="cliente-provincia">Provincia</label>
+              <input
+                id="cliente-provincia"
+                type="text"
+                value={form.provincia}
+                onChange={(e) => setForm({ ...form, provincia: e.target.value })}
+                maxLength={100}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-canton">Cantón</label>
+              <input
+                id="cliente-canton"
+                type="text"
+                value={form.canton}
+                onChange={(e) => setForm({ ...form, canton: e.target.value })}
+                maxLength={100}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-distrito">Distrito</label>
+              <input
+                id="cliente-distrito"
+                type="text"
+                value={form.distrito}
+                onChange={(e) => setForm({ ...form, distrito: e.target.value })}
+                maxLength={100}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-barrio">Barrio</label>
+              <input
+                id="cliente-barrio"
+                type="text"
+                value={form.barrio}
+                onChange={(e) => setForm({ ...form, barrio: e.target.value })}
+                maxLength={100}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-codigo-postal">Código postal</label>
+              <input
+                id="cliente-codigo-postal"
+                type="text"
+                value={form.codigo_postal}
+                onChange={(e) =>
+                  setForm({ ...form, codigo_postal: e.target.value })
+                }
+                maxLength={20}
+              />
+            </div>
+            <div className="form-group full-width">
+              <label htmlFor="cliente-direccion">
+                Otras señas / dirección actual
+              </label>
+              <textarea
+                id="cliente-direccion"
+                rows={2}
+                value={form.direccion}
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                placeholder="Se conserva el campo de dirección existente"
+                maxLength={500}
+              />
+            </div>
+          </div>
+        </details>
+
+        <details className="customer-form-section">
+          <summary>4. Información tributaria</summary>
+          <div className="form-grid">
+            <div className="form-group full-width">
+              <label
+                className="checkbox-inline"
+                htmlFor="requiere-factura-electronica"
+              >
+                <input
+                  id="requiere-factura-electronica"
+                  type="checkbox"
+                  checked={form.requiere_factura_electronica}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      requiere_factura_electronica: e.target.checked,
+                    })
+                  }
+                />
+                <span>El cliente solicita comprobantes electrónicos</span>
+              </label>
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-correo-facturacion">
+                Correo para comprobantes electrónicos
+              </label>
+              <input
+                id="cliente-correo-facturacion"
+                type="email"
+                value={form.correo_facturacion}
+                onChange={(e) =>
+                  setForm({ ...form, correo_facturacion: e.target.value })
+                }
+                placeholder="facturacion@ejemplo.com"
+                maxLength={254}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cliente-codigo-actividad">
+                Código de actividad económica
+              </label>
+              <input
+                id="cliente-codigo-actividad"
+                type="text"
+                value={form.codigo_actividad_economica}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    codigo_actividad_economica: e.target.value,
+                  })
+                }
+                maxLength={40}
+              />
+            </div>
+            <div className="form-group full-width">
+              <label htmlFor="cliente-actividad">Actividad económica</label>
+              <input
+                id="cliente-actividad"
+                type="text"
+                value={form.actividad_economica}
+                onChange={(e) =>
+                  setForm({ ...form, actividad_economica: e.target.value })
+                }
+                maxLength={250}
+              />
+            </div>
+            <p className="customer-form-note full-width">
+              Datos opcionales para preparar el registro; no se validan contra
+              catálogos ni reglas de Hacienda.
+            </p>
+          </div>
+        </details>
+
+        <details className="customer-form-section">
+          <summary>5. Información comercial</summary>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="cliente-estado">Estado del cliente</label>
+              <select
+                id="cliente-estado"
+                value={form.estado}
+                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+              >
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div className="form-group customer-balance">
+              <span className="detail-label">Balance pendiente</span>
+              <strong>
+                {formatCRC(clienteEdit?.balance_pendiente ?? 0)}
+              </strong>
+            </div>
+            <div className="form-group full-width">
+              <label className="checkbox-inline" htmlFor="tiene_descuento">
+                <input
+                  id="tiene_descuento"
+                  type="checkbox"
+                  checked={form.tiene_descuento}
+                  onChange={(e) =>
+                    setForm({ ...form, tiene_descuento: e.target.checked })
+                  }
+                />
+                <span>Aplica descuento</span>
+              </label>
+            </div>
+            {form.tiene_descuento && (
+              <div className="form-group">
+                <label htmlFor="cliente-descuento">
+                  Porcentaje de descuento (%)
+                </label>
+                <input
+                  id="cliente-descuento"
+                  type="text"
+                  inputMode="decimal"
+                  value={form.descuento_porcentaje}
+                  required
+                  onKeyDown={bloquearTeclasNoNumericas}
+                  onChange={(e) => {
+                    const value = aceptarPorcentaje(e.target.value);
+                    if (value !== null) {
+                      setForm({ ...form, descuento_porcentaje: value });
+                    }
+                  }}
+                  placeholder="Ej.: 5"
+                />
+              </div>
+            )}
+          </div>
+        </details>
+
+        <details className="customer-form-section">
+          <summary>6. Notas</summary>
+          <div className="form-grid">
+            <div className="form-group full-width">
+              <label htmlFor="cliente-notas">Notas internas</label>
+              <textarea
+                id="cliente-notas"
+                rows={3}
+                value={form.notas}
+                onChange={(e) => setForm({ ...form, notas: e.target.value })}
+                placeholder="Observaciones o información comercial adicional"
+                maxLength={2000}
+              />
+            </div>
+          </div>
+        </details>
       </div>
 
       <div className="form-actions">
@@ -582,7 +930,7 @@ function Clientes() {
           <div className="search-bar">
             <input
               type="text"
-              placeholder="Buscar por nombre, empresa o correo..."
+              placeholder="Buscar por nombre, identificación o contacto..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
@@ -749,50 +1097,70 @@ function Clientes() {
             </div>
 
             <div className="detail-grid">
-              <div className="detail-row">
-                <span className="detail-label">Empresa</span>
-                <span className="detail-value">
-                  {clienteDetalle.empresa || "—"}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Teléfono</span>
-                <span className="detail-value">
-                  {clienteDetalle.telefono || "—"}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Correo</span>
-                <span className="detail-value">
-                  {clienteDetalle.correo || "—"}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Dirección</span>
-                <span className="detail-value">
-                  {clienteDetalle.direccion || "—"}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Balance pendiente</span>
-                <span className="detail-value">
-                  {formatCRC(clienteDetalle.balance_pendiente)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Descuento</span>
-                <span className="detail-value">
-                  {clienteDetalle.tiene_descuento
+              {[
+                [
+                  "Tipo de cliente",
+                  {
+                    persona_fisica: "Persona física",
+                    persona_juridica: "Persona jurídica",
+                    extranjero: "Extranjero",
+                    otro: "Otro",
+                  }[clienteDetalle.tipo_cliente],
+                ],
+                [
+                  "Identificación",
+                  `${{
+                    cedula_fisica: "Cédula física",
+                    cedula_juridica: "Cédula jurídica",
+                    dimex: "DIMEX",
+                    nite: "NITE",
+                    otro: "Otro tipo",
+                  }[clienteDetalle.tipo_identificacion] || "—"}${
+                    clienteDetalle.numero_identificacion
+                      ? ` · ${clienteDetalle.numero_identificacion}`
+                      : ""
+                  }`,
+                ],
+                ["Nombre comercial", clienteDetalle.empresa],
+                ["Teléfono principal", clienteDetalle.telefono],
+                ["Teléfono secundario", clienteDetalle.telefono_secundario],
+                ["Correo general", clienteDetalle.correo],
+                ["Persona de contacto", clienteDetalle.persona_contacto],
+                [
+                  "Correo para comprobantes",
+                  clienteDetalle.correo_facturacion,
+                ],
+                ["Provincia", clienteDetalle.provincia],
+                ["Cantón", clienteDetalle.canton],
+                ["Distrito", clienteDetalle.distrito],
+                ["Barrio", clienteDetalle.barrio],
+                ["Código postal", clienteDetalle.codigo_postal],
+                ["Otras señas / dirección", clienteDetalle.direccion],
+                ["Actividad económica", clienteDetalle.actividad_economica],
+                [
+                  "Código de actividad",
+                  clienteDetalle.codigo_actividad_economica,
+                ],
+                [
+                  "Solicita comprobantes electrónicos",
+                  clienteDetalle.requiere_factura_electronica ? "Sí" : "No",
+                ],
+                ["Balance pendiente", formatCRC(clienteDetalle.balance_pendiente)],
+                [
+                  "Descuento",
+                  clienteDetalle.tiene_descuento
                     ? `${clienteDetalle.descuento_porcentaje}%`
-                    : "Sin descuento"}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Estado</span>
-                <span className={`badge badge-${clienteDetalle.estado}`}>
-                  {clienteDetalle.estado}
-                </span>
-              </div>
+                    : "Sin descuento",
+                ],
+                ["Estado", clienteDetalle.estado],
+                ["Fecha de creación", clienteDetalle.creado_en],
+                ["Última actualización", clienteDetalle.actualizado],
+              ].map(([label, value]) => (
+                <div className="detail-row" key={label}>
+                  <span className="detail-label">{label}</span>
+                  <span className="detail-value">{value || "—"}</span>
+                </div>
+              ))}
               {clienteDetalle.notas && (
                 <div className="detail-row detail-row-full">
                   <span className="detail-label">Notas</span>

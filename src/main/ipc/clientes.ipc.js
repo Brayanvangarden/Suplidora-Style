@@ -101,7 +101,10 @@ function registerClientesIpc() {
   // ── Actualizar ─────────────────────────────────────
   ipcMain.handle('clientes:update', async (_, { id, ...formData }) => {
     try {
-      const validacion = validarCliente(formData)
+      const clienteActual = clientesRepo.getById(id)
+      if (!clienteActual) return { ok: false, message: 'Cliente no encontrado' }
+
+      const validacion = validarCliente({ ...clienteActual, ...formData })
       if (!validacion.ok) return validacion
 
       const data = clientesRepo.update(id, validacion.data)

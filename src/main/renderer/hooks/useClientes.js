@@ -66,7 +66,9 @@ export function useClientes() {
       (c.nombre ?? '').toLowerCase().includes(q)   ||
       (c.empresa ?? '').toLowerCase().includes(q) ||
       (c.telefono ?? '').includes(q)              ||
-      (c.correo ?? '').toLowerCase().includes(q)
+      (c.correo ?? '').toLowerCase().includes(q) ||
+      (c.correo_facturacion ?? '').toLowerCase().includes(q) ||
+      (c.numero_identificacion ?? '').toLowerCase().includes(q)
     )
   }, [clientes])
 

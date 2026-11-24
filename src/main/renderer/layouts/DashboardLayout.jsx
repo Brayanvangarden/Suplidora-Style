@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useTienda } from "../hooks/useTienda";
 
 const navSections = [
   {
@@ -10,6 +11,7 @@ const navSections = [
   {
     title: "Ventas",
     links: [
+      { label: "Proveedores", path: "/proveedores", icon: "🏢" },
       { label: "Clientes", path: "/clientes", icon: "💖" },
       { label: "Órdenes", path: "/ordenes", icon: "🛍️" },
       { label: "Pagos", path: "/pagos", icon: "💳" },
@@ -38,6 +40,7 @@ const navSections = [
 
 function DashboardLayout() {
   const { user, logout, isAdmin } = useAuth();
+  const { tienda, error: errorTienda } = useTienda();
   const [sidebarOpen, setSidebarOpen] = useState(
     () => window.matchMedia("(min-width: 901px)").matches,
   );
@@ -92,8 +95,10 @@ function DashboardLayout() {
             </svg>
           </span>
           <div>
-            <h2>BeYou</h2>
-            <p>Suplidora de belleza</p>
+            <h2>
+              {tienda?.nombreComercial ||
+                (errorTienda ? "Información de tienda no disponible" : "Cargando tienda…")}
+            </h2>
           </div>
         </div>
 

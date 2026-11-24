@@ -601,14 +601,14 @@ function Ordenes() {
                             type="button"
                             onClick={() => generarProforma(orden)}
                           >
-                            🧾 Generar PROFORMA
+                            🧾 Descargar proforma
                           </button>
                           <button
                             className="btn-action-outline"
                             type="button"
                             onClick={() => verProforma(orden)}
                           >
-                            👁️ Ver PROFORMA
+                            👁️ Ver proforma
                           </button>
                         </td>
                       </tr>
